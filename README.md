@@ -6,9 +6,11 @@ Prototipo gratuito e simulatore tecnico di un gioco a venti scelte binarie. Ogni
 
 ## Stato del progetto
 
-Milestone completata: **M1.8.2 — Autenticazione amministrativa, autorizzazioni, CSP/UI ed E2E (SQLite runtime fix nei browser test)**.
+Milestone corrente: **M1.8.2 — Autenticazione amministrativa, autorizzazioni, CSP/UI ed E2E (in fase di validazione completa della suite)**.
 
 M1.8.2 consolida M1.8.1: configura i PRAGMA SQLite prima di aprire la transazione esterna dei browser test, evitando errori HTTP 500 dovuti a `PRAGMA synchronous` eseguito dentro una transazione. M1.8.1 aggiunge isolamento transazionale degli E2E, mantiene stabile il clock controllato durante i browser test e rende `php bin/phpunit` deterministico ricreando automaticamente il database test. M1.8 aggiunge autenticazione individuale all'area amministrativa mantenendo l'allowlist IP come difesa aggiuntiva. Introduce ruoli espliciti, invalidazione delle sessioni dopo modifiche di sicurezza, CSP senza `unsafe-inline`, UI più accessibile e test browser completi dei flussi critici.
+
+Prima di avviare M2.1 è stata pianificata la fase **M1.9 — Verification & Hardening**, composta da 15 milestone bloccanti che verificano l’intero processo pezzo per pezzo. Il piano completo è in `docs/15-verification-hardening-plan.md`.
 
 Il sistema può ora:
 
@@ -192,6 +194,7 @@ La suite M1.8.2 contiene **79 metodi PHPUnit**, pari a **81 casi effettivi** con
 - `docs/12-operations-runbook.md`
 - `docs/13-admin-auth-e2e.md`
 - `docs/14-release-checklist.md`
+- `docs/15-verification-hardening-plan.md`
 
 
 ## Simulazioni statistiche

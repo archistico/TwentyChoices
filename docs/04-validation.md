@@ -269,3 +269,11 @@ Correzione:
 - nessuna regola di gioco, schema dati o configurazione di produzione viene modificata.
 
 Questa correzione copre la causa comune dei 5 errori DOM vuoto e dei 4 fallimenti HTTP 500 osservati nella suite M1.8.1.
+
+## Pianificazione M1.9 — Verification & Hardening
+
+Prima di riprendere nuove funzionalità M2.1 è stata formalizzata una fase di verifica progressiva dell'intero processo, suddivisa in 15 milestone bloccanti da M1.9.1 a M1.9.15.
+
+La fase copre, nell'ordine: ambiente/database, catalogo e apertura round, commitment, avvio giocata e contabilità, timer/anti-replay, journey perdente, settlement vincente, concorrenza, reset/crediti, ricevute/verifica pubblica, ledger/audit, amministrazione/sicurezza HTTP, fault injection/recovery, performance/limiti SQLite e full journey finale.
+
+Ogni milestone richiede checklist manuale, test automatici, risultati osservati, correzioni, documentazione, ZIP completo e validazione esplicita. Il piano dettagliato e i gate di accettazione sono in `docs/15-verification-hardening-plan.md`.

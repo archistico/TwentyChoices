@@ -133,6 +133,120 @@
 - [x] Pagine errore 403/404/429/500 coerenti e non informative.
 - [x] Checklist release e configurazione demo remota sicura.
 
+## M1.9 — Verification & Hardening
+
+Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'intero processo pezzo per pezzo. Ogni milestone richiede checklist manuale, test automatici, documentazione aggiornata, ZIP completo e validazione esplicita prima di procedere. Il piano operativo dettagliato è in `docs/15-verification-hardening-plan.md`.
+
+### M1.9.1 — Environment & Database Verification
+
+- [ ] Installazione pulita e bootstrap ripetibile.
+- [ ] Segreti locali, estensioni PHP, SQLite e PRAGMA verificati.
+- [ ] Migrazioni complete da zero e database test deterministico.
+- [ ] **Gate:** installazione automatica senza dipendenze nascoste.
+
+### M1.9.2 — Catalog & Round Creation Verification
+
+- [ ] CRUD catalogo e invarianti della porta finale.
+- [ ] Minimo 19 coppie regolari attive.
+- [ ] Snapshot immutabili e selezione 19 + porta finale.
+- [ ] Apertura atomica di un solo round `ACTIVE`.
+- [ ] **Gate:** catalogo e round coerenti senza effetti retroattivi.
+
+### M1.9.3 — Cryptographic Commitment Verification
+
+- [ ] Ricalcolo end-to-end del commitment.
+- [ ] Tamper test su percorso, nonce, round e question set.
+- [ ] Nessun reveal durante `ACTIVE`.
+- [ ] **Gate:** ogni manomissione deve essere rilevabile.
+
+### M1.9.4 — Play Start & Accounting Verification
+
+- [ ] Sessione anonima, cookie e token hashati.
+- [ ] Una sola giocata aperta per sessione/round.
+- [ ] Contabilizzazione virtuale 1,00 = 0,80 + 0,20.
+- [ ] Doppio avvio idempotente.
+- [ ] **Gate:** una partecipazione genera una sola giocata e una sola quota.
+
+### M1.9.5 — Step, Timer & Anti-Replay Verification
+
+- [ ] Timer server-side 1,999 s rifiutato / 2,000 s accettato.
+- [ ] Refresh, token rotation, replay e doppia scheda.
+- [ ] Tentativi di salto step e manipolazione HTTP.
+- [ ] **Gate:** il client non controlla la macchina a stati.
+
+### M1.9.6 — Full Losing Journey Verification
+
+- [ ] Percorso completo 1/20 → 20/20 perdente.
+- [ ] `COMPLETED_LOST`, round ancora `ACTIVE`, ricevuta valida.
+- [ ] Nessun reveal anticipato.
+- [ ] **Gate:** una perdita chiude solo la giocata.
+
+### M1.9.7 — Winning Settlement Verification
+
+- [ ] Percorso vincente completo.
+- [ ] Winner claim, freeze jackpot, payout, crediti, nuovo round, reveal e settlement atomici.
+- [ ] Riconciliazione del jackpot congelato.
+- [ ] **Gate:** nessuno stato intermedio osservabile.
+
+### M1.9.8 — Concurrency & Single-Winner Verification
+
+- [ ] Due richieste vincenti concorrenti.
+- [ ] Richieste stale dopo la vittoria.
+- [ ] Un solo vincitore, payout e nuovo round.
+- [ ] **Gate:** unicità del vincitore garantita dal database.
+
+### M1.9.9 — Reset & Restart Credit Verification
+
+- [ ] Reset di giocate a step differenti.
+- [ ] Un credito monouso per ogni giocata interrotta.
+- [ ] Riscatto senza nuovo 0,80/0,20.
+- [ ] Token e URL del vecchio round inutilizzabili.
+- [ ] **Gate:** credito neutro, univoco e non riutilizzabile.
+
+### M1.9.10 — Receipt & Public Verification Audit
+
+- [ ] Ricevute WON/LOST/INTERRUPTED.
+- [ ] Integrità e immutabilità delle ricevute.
+- [ ] Verifica pubblica completa dopo settlement.
+- [ ] **Gate:** risultato verificabile senza fidarsi dell'amministratore.
+
+### M1.9.11 — Ledger & Audit Integrity Verification
+
+- [ ] Riconciliazione ledger al centesimo.
+- [ ] Append-only e tentativi UPDATE/DELETE respinti.
+- [ ] Verifica catena hash audit e tamper detection.
+- [ ] **Gate:** contabilità riconciliabile e storia alterata rilevabile.
+
+### M1.9.12 — Admin, Authorization & HTTP Security Verification
+
+- [ ] Matrice `SUPER_ADMIN` / `OPERATOR` / `AUDITOR`.
+- [ ] Login, logout, rate limit, revoca sessioni e ultimo super admin.
+- [ ] Allowlist IP, CSP, security header, cookie e pagine errore.
+- [ ] **Gate:** nessuna escalation di privilegi o esposizione di segreti.
+
+### M1.9.13 — Fault Injection & Recovery
+
+- [ ] Errori artificiali nei punti critici del settlement.
+- [ ] Rollback totale e assenza di mezzi settlement.
+- [ ] Restart/crash recovery, WAL, lock e quick check.
+- [ ] **Gate:** nessuna corruzione persistente dopo errore o restart.
+
+### M1.9.14 — Performance, SQLite Limits & Simulation Isolation
+
+- [ ] Carico progressivo 10 / 100 / 1.000 / 10.000 workload equivalenti.
+- [ ] Latenze, lock, WAL, crescita DB/audit e busy timeout.
+- [ ] Snapshot prima/dopo simulazioni per provare isolamento.
+- [ ] Criteri documentati per futura migrazione a PostgreSQL.
+- [ ] **Gate:** limiti operativi misurati, non presunti.
+
+### M1.9.15 — Final Full-Journey Acceptance
+
+- [ ] Installazione pulita → admin → R1 → perdita → rigiocata → vittoria.
+- [ ] Reset concorrenti → crediti → R2 → riscatto neutro.
+- [ ] Ricevute, commitment, storico, ledger, audit e diagnostica.
+- [ ] Restart finale e nuova verifica di consistenza.
+- [ ] **Gate finale:** solo dopo validazione completa si riapre M2.1.
+
 ## M2.1 — Esperienza di gioco e contenuti
 
 - [ ] Curatela delle coppie per varietà, ambiguità e interesse visivo.

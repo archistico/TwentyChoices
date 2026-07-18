@@ -46,3 +46,9 @@ L'autenticazione non sostituisce l'allowlist IP. Per una demo remota mantenere e
 5. nessuna esposizione diretta del server PHP built-in su Internet.
 
 Il server `php -S` resta destinato esclusivamente allo sviluppo locale.
+
+## Gate M1.9 prima di M2.1
+
+La checklist di release tecnica non sostituisce la fase M1.9. Prima di riprendere lo sviluppo di M2.1 devono essere completate e validate in sequenza tutte le milestone M1.9.1–M1.9.15 definite in `docs/15-verification-hardening-plan.md`.
+
+In particolare il gate finale richiede una full journey da installazione pulita fino a vincita, settlement, reset, credito, nuovo round, verifica pubblica, riconciliazione ledger, audit, diagnostica e restart.
