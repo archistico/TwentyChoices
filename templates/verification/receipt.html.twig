@@ -5,7 +5,7 @@
 {% block body %}
 <section class="panel round-public">
     <div class="eyebrow">Ricevuta pubblica verificabile</div>
-    <h1 style="font-size: clamp(2rem, 5vw, 3.8rem)">{{ receipt.verificationCode }}</h1>
+    <h1 class="page-title-medium">{{ receipt.verificationCode }}</h1>
 
     <div class="summary">
         <div class="summary-item">
@@ -33,8 +33,8 @@
     </dl>
 
     {% if receipt.roundVerificationAvailable %}
-        <h2 style="margin-top: 34px">Verifica crittografica del round</h2>
-        <div class="summary" style="margin-top: 18px">
+        <h2 class="margin-top-xl">Verifica crittografica del round</h2>
+        <div class="summary margin-top-md">
             <div class="summary-item">
                 <span class="summary-value">{{ receipt.roundCommitmentValid ? 'VALIDO' : 'ERRORE' }}</span>
                 <span class="summary-label">Commitment</span>

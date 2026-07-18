@@ -33,6 +33,10 @@ use App\Game\Domain\ValueObject\WinningPath;
 use App\Game\Infrastructure\Security\AuthenticatedRoundSecretCipher;
 use App\Shared\Security\SecureTokenGenerator;
 use App\Security\Application\SecurityEventLogger;
+use App\Security\Admin\AdminAccessPolicy;
+use App\Security\Admin\AdminIdentity;
+use App\Security\Admin\AdminPasswordHasher;
+use App\Security\Admin\AdminRole;
 use App\Shared\Time\Clock;
 use App\Simulation\Domain\SimulationEngine;
 use App\Simulation\Domain\SimulationProfile;
@@ -322,6 +326,33 @@ $tests['security logger redacts sensitive fields'] = static function (): void {
 };
 
 
+
+
+$tests['admin password hashing rejects plaintext and weak credentials'] = static function (): void {
+    $hasher = new AdminPasswordHasher();
+    $hash = $hasher->hash('TwentyChoices2026!');
+    if ($hash === 'TwentyChoices2026!' || !$hasher->verify('TwentyChoices2026!', $hash)) {
+        throw new RuntimeException('Admin password hashing is invalid.');
+    }
+    try {
+        $hasher->hash('short');
+        throw new RuntimeException('A weak admin password was accepted.');
+    } catch (InvalidArgumentException) {
+    }
+};
+
+$tests['admin roles are deny-by-default'] = static function (): void {
+    $policy = new AdminAccessPolicy();
+    $operator = new AdminIdentity('1', 'operator', AdminRole::OPERATOR, 1);
+    $auditor = new AdminIdentity('2', 'auditor', AdminRole::AUDITOR, 1);
+    if (!$policy->allows($operator, 'admin_round_open')
+        || $policy->allows($operator, 'admin_diagnostics_index')
+        || !$policy->allows($auditor, 'admin_diagnostics_index')
+        || $policy->allows($auditor, 'admin_round_open')
+        || $policy->allows($auditor, 'admin_unknown_route')) {
+        throw new RuntimeException('Admin authorization policy is invalid.');
+    }
+};
 
 $failed = 0;
 foreach ($tests as $name => $test) {

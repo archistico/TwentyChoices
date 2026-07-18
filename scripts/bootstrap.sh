@@ -41,10 +41,10 @@ run php bin/console cache:clear
 run php bin/console doctrine:migrations:migrate --no-interaction
 run php bin/console app:system:check
 
-# Recreate the test database so persistence tests always start from a deterministic seed.
-rm -f var/test.db var/test.db-wal var/test.db-shm
-run php bin/console doctrine:migrations:migrate --no-interaction --env=test
+# bin/phpunit recreates var/test.db and applies all migrations itself, so direct
+# executions remain deterministic even after an interrupted/failing test run.
 run php tools/domain-tests.php
 run php bin/phpunit
 
 echo "TwentyChoices initialized successfully."
+echo "If needed, create the first admin: php bin/console app:admin:create admin --role=SUPER_ADMIN"

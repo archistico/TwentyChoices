@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ mode == 'create' ? 'Nuovo amministratore' : 'Modifica amministratore' }} · TwentyChoices{% endblock %}
+{% block body %}
+<div class="page-header"><div><div class="eyebrow">Sicurezza</div><h1>{{ mode == 'create' ? 'Nuovo amministratore' : user.username }}</h1></div><a class="button" href="{{ path('admin_user_index') }}">Torna all'elenco</a></div>
+{% if error %}<div class="error-box" role="alert">{{ error }}</div>{% endif %}
+<section class="panel">
+<form method="post" class="form-grid">
+    <input type="hidden" name="_token" value="{{ csrf_token(mode == 'create' ? 'admin_user_create' : 'admin_user_edit_' ~ user.id) }}">
+    {% if mode == 'create' %}
+    <div class="field"><label for="username">Username</label><input id="username" name="username" autocomplete="off" required minlength="3" maxlength="64"><div class="help">Lettere, numeri, punto, trattino e underscore.</div></div>
+    <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="new-password" required minlength="12"><div class="help">Almeno 12 caratteri, una lettera e una cifra.</div></div>
+    {% endif %}
+    <div class="field"><label for="role">Ruolo</label><select id="role" name="role" class="select-input" required>{% for role in roles %}<option value="{{ role.value }}" {% if user and user.role == role.value %}selected{% endif %}>{{ role.label }}</option>{% endfor %}</select></div>
+    <div class="field-full form-footer"><button class="button button-primary" type="submit">{{ mode == 'create' ? 'Crea account' : 'Salva ruolo' }}</button></div>
+</form>
+</section>
+{% if mode == 'edit' %}
+<section class="panel margin-top-lg">
+    <h2>Reimposta password</h2><p class="help">La modifica ha effetto immediato. Le sessioni future useranno la nuova password.</p>
+    <form method="post" action="{{ path('admin_user_password', {id: user.id}) }}" class="form-inline-wide">
+        <input type="hidden" name="_token" value="{{ csrf_token('admin_user_password_' ~ user.id) }}">
+        <label class="sr-only" for="new_password">Nuova password</label>
+        <input id="new_password" name="password" type="password" autocomplete="new-password" minlength="12" required placeholder="Nuova password">
+        <button class="button" type="submit">Aggiorna password</button>
+    </form>
+</section>
+{% endif %}
+{% endblock %}

@@ -47,4 +47,38 @@ if (false === getenv('COMPOSER_BINARY')) {
     }
 }
 
+
+function prepareTestDatabase(string $projectDir): void
+{
+    if ('1' === getenv('TWENTY_CHOICES_SKIP_TEST_DB_RESET')) {
+        return;
+    }
+
+    $varDir = $projectDir.DIRECTORY_SEPARATOR.'var';
+    if (!is_dir($varDir) && !mkdir($varDir, 0775, true) && !is_dir($varDir)) {
+        fwrite(STDERR, "Unable to create var directory for the test database.\n");
+        exit(1);
+    }
+
+    $database = $varDir.DIRECTORY_SEPARATOR.'test.db';
+    foreach ([$database, $database.'-wal', $database.'-shm'] as $path) {
+        if (is_file($path) && !unlink($path)) {
+            fwrite(STDERR, sprintf("Unable to remove stale test database file: %s\n", $path));
+            exit(1);
+        }
+    }
+
+    $console = $projectDir.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'console';
+    $command = escapeshellarg(PHP_BINARY).' '.escapeshellarg($console)
+        .' doctrine:migrations:migrate --no-interaction --env=test';
+
+    passthru($command, $exitCode);
+    if (0 !== $exitCode) {
+        fwrite(STDERR, "Unable to prepare the SQLite test database.\n");
+        exit($exitCode);
+    }
+}
+
+prepareTestDatabase(dirname(__DIR__));
+
 require dirname(__DIR__).'/vendor/symfony/phpunit-bridge/bin/simple-phpunit.php';

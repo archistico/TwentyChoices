@@ -115,3 +115,37 @@ Questa configurazione migliora robustezza e concorrenza del prototipo ma non cam
 ## Failure atomici
 
 I test M1.7 introducono fault injection nel punto di creazione del round successivo. Un errore deve causare rollback di tutto il settlement, inclusa la risposta 20/20. Un secondo test conserva un challenge stale di un’altra sessione e verifica che, dopo il settlement, non possa modificare il vincitore già registrato.
+
+## M1.8 — Boundary di sicurezza amministrativo
+
+Il flusso HTTP amministrativo è:
+
+```text
+Request
+  → allowlist IP/CIDR
+  → rate limit
+  → autenticazione sessione + refresh account dal DB
+  → AdminAccessPolicy
+  → controller/caso d'uso
+```
+
+Componenti:
+
+- `AdminAuthentication`: login, refresh della sessione, logout e invalidazione `auth_version`;
+- `AdminUserRepository`: persistenza DBAL degli account;
+- `AdminPasswordHasher`: policy e hashing password;
+- `AdminAccessPolicy`: matrice di autorizzazione centralizzata deny-by-default;
+- `SecurityRequestSubscriber`: applica allowlist, autenticazione, autorizzazione, rate limit, CSP e pagine errore.
+
+La sessione non contiene privilegi autorevoli oltre la cache minima dell'identità: ad ogni richiesta l'account viene riletto dal database. Il ruolo effettivo e lo stato attivo sono quindi sempre quelli persistiti.
+
+### Frontend/CSP
+
+`templates/base.html.twig` non contiene più `<style>` inline. Tutto il CSS è in `public/app.css`; il gameplay continua a usare `public/play.js`. La CSP può quindi imporre:
+
+```text
+script-src 'self'
+style-src 'self'
+```
+
+Gli elementi con valori grafici dinamici usano `<progress>` invece di attributi `style` generati dal template.

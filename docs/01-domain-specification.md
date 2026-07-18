@@ -87,3 +87,20 @@ TwentyChoices è un simulatore tecnico gratuito. Tutti gli importi, le quote, i 
 - Un errore durante il settlement vincente deve annullare anche la ventesima scelta e ogni side effect successivo.
 - Una richiesta stale successiva a una vittoria non può cambiare vincitore, payout o stato del round.
 - `/health` non dipende dal database; `/ready` deve fallire se lo schema applicativo non è interrogabile.
+
+## M1.8 — Dominio amministrativo
+
+L'amministrazione introduce un'identità separata dal `player_session` anonimo. Un `admin_user` non partecipa alle giocate e non può essere usato come identità del giocatore.
+
+Invarianti:
+
+- username univoco case-insensitive;
+- password mai persistita in chiaro;
+- ruolo in `SUPER_ADMIN | OPERATOR | AUDITOR`;
+- un account disattivato non può mantenere una sessione valida;
+- ogni cambio password, ruolo o stato incrementa `auth_version`;
+- la sessione è valida solo se la sua `auth_version` coincide con quella persistita;
+- deve esistere almeno un `SUPER_ADMIN` attivo prima di poter disattivare/declassare un altro `SUPER_ADMIN` attivo;
+- autorizzazione deny-by-default per le route amministrative.
+
+L'allowlist IP è un pre-requisito di rete e non sostituisce l'identità amministrativa.

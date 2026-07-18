@@ -32,8 +32,8 @@
     </dl>
 
     {% if verification.available %}
-        <h2 style="margin-top: 34px">Materiale pubblico di verifica</h2>
-        <div class="summary" style="margin-top: 18px">
+        <h2 class="margin-top-xl">Materiale pubblico di verifica</h2>
+        <div class="summary margin-top-md">
             <div class="summary-item">
                 <span class="summary-value">{{ verification.commitmentMatches ? 'VALIDO' : 'ERRORE' }}</span>
                 <span class="summary-label">Ricalcolo commitment</span>
@@ -60,7 +60,7 @@
         <div class="notice">Il materiale segreto non è pubblico mentre il round è attivo. Sarà rivelato automaticamente e in modo immutabile al settlement.</div>
     {% endif %}
 
-    <div class="actions" style="margin-top: 24px">
+    <div class="actions margin-top-lg">
         {% if round.status == 'ACTIVE' %}
             <form method="post" action="{{ path('app_play_start') }}" class="inline-form">
                 <input type="hidden" name="_token" value="{{ csrf_token('start_play') }}">

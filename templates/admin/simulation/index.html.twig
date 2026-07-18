@@ -11,15 +11,15 @@
     </div>
 </div>
 
-<section class="panel" style="margin-bottom: 24px">
+<section class="panel margin-bottom-lg">
     <div class="eyebrow">Metriche del simulatore reale</div>
-    <div class="summary" style="margin-top: 18px; margin-bottom: 0">
+    <div class="summary margin-top-md margin-zero-bottom">
         <div class="summary-item"><span class="summary-value">{{ gameMetrics.totalPlays|number_format(0, ',', '.') }}</span><span class="summary-label">Giocate registrate</span></div>
         <div class="summary-item"><span class="summary-value">{{ gameMetrics.distinctCompletedPaths|number_format(0, ',', '.') }}</span><span class="summary-label">Percorsi completi distinti</span></div>
         <div class="summary-item"><span class="summary-value">{{ gameMetrics.avgPlaySeconds|number_format(1, ',', '.') }} s</span><span class="summary-label">Durata media giocata</span></div>
         <div class="summary-item"><span class="summary-value">{{ gameMetrics.avgRoundSeconds|number_format(1, ',', '.') }} s</span><span class="summary-label">Durata media round chiusi</span></div>
     </div>
-    <div class="summary" style="margin-top: 14px; margin-bottom: 0">
+    <div class="summary margin-top-md margin-zero-bottom">
         <div class="summary-item"><span class="summary-value">{{ gameMetrics.wonPlays|number_format(0, ',', '.') }}</span><span class="summary-label">Vinte</span></div>
         <div class="summary-item"><span class="summary-value">{{ gameMetrics.lostPlays|number_format(0, ',', '.') }}</span><span class="summary-label">Perse</span></div>
         <div class="summary-item"><span class="summary-value">{{ gameMetrics.interruptedPlays|number_format(0, ',', '.') }}</span><span class="summary-label">Interrotte / accreditate</span></div>
@@ -28,11 +28,11 @@
     </div>
 </section>
 
-<section class="panel" style="margin-bottom: 28px">
+<section class="panel margin-bottom-xl">
     <div class="eyebrow">Nuova simulazione sintetica</div>
     <h2>Genera percorsi</h2>
     <p class="muted">I profili con bias sono modelli sintetici e non rappresentano dati reali sul comportamento umano. Lo stesso seed e gli stessi parametri producono lo stesso campione.</p>
-    <form method="post" action="{{ path('admin_simulation_run') }}" class="form-grid" style="margin-top: 22px">
+    <form method="post" action="{{ path('admin_simulation_run') }}" class="form-grid margin-top-lg">
         <input type="hidden" name="_token" value="{{ csrf_token('simulation_run') }}">
         <div class="field">
             <label for="plays">Numero di giocate</label>
@@ -62,13 +62,13 @@
             <button class="button button-primary" type="submit">Esegui simulazione</button>
         </div>
     </form>
-    <div class="notice" style="margin-top: 18px">
+    <div class="notice margin-top-md">
         Per simulazioni fino a 1.000.000 di giocate: <code>php bin/console app:simulation:run --plays=1000000 --profile=UNIFORM --seed=20260718</code>
     </div>
 </section>
 
 <section>
-    <h2 style="margin-bottom: 14px">Simulazioni recenti</h2>
+    <h2 class="margin-bottom-md">Simulazioni recenti</h2>
     <div class="table-wrap">
         <table>
             <thead><tr><th>Codice</th><th>Profilo</th><th>Giocate</th><th>Percorsi distinti</th><th>Duplicati</th><th>Copertura</th><th>Durata</th></tr></thead>

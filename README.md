@@ -6,37 +6,29 @@ Prototipo gratuito e simulatore tecnico di un gioco a venti scelte binarie. Ogni
 
 ## Stato del progetto
 
-Milestone completata: **M1.7.3 — Correzione mapping PlayScreen terminale**.
+Milestone completata: **M1.8.2 — Autenticazione amministrativa, autorizzazioni, CSP/UI ed E2E (SQLite runtime fix nei browser test)**.
 
-M1.7.3 corregge il mapping del DTO `PlayScreen` nel ramo terminale: gli argomenti sono ora nominati, così `verificationCode` non può slittare accidentalmente nella posizione di `availableAt`. La costruzione del DTO usa argomenti nominati anche nel ramo di gioco attivo per prevenire regressioni future quando il costruttore evolve.
+M1.8.2 consolida M1.8.1: configura i PRAGMA SQLite prima di aprire la transazione esterna dei browser test, evitando errori HTTP 500 dovuti a `PRAGMA synchronous` eseguito dentro una transazione. M1.8.1 aggiunge isolamento transazionale degli E2E, mantiene stabile il clock controllato durante i browser test e rende `php bin/phpunit` deterministico ricreando automaticamente il database test. M1.8 aggiunge autenticazione individuale all'area amministrativa mantenendo l'allowlist IP come difesa aggiuntiva. Introduce ruoli espliciti, invalidazione delle sessioni dopo modifiche di sicurezza, CSP senza `unsafe-inline`, UI più accessibile e test browser completi dei flussi critici.
 
 Il sistema può ora:
 
-- aprire un round verificabile con una strada segreta globale e commitment pubblico;
+- gestire account amministrativi con password hashata e ruoli `SUPER_ADMIN`, `OPERATOR`, `AUDITOR`;
+- richiedere sia rete autorizzata sia sessione autenticata per ogni route `/admin`;
+- invalidare una sessione esistente dopo cambio password, ruolo o disattivazione;
+- impedire a livello SQLite la rimozione dell'ultimo `SUPER_ADMIN` attivo;
+- aprire round verificabili con strada segreta globale e commitment pubblico;
 - eseguire giocate da venti scelte con timer server-side e token monouso;
 - assegnare atomicamente la vittoria al primo percorso corretto validato;
 - congelare il montepremio, interrompere le altre giocate e creare crediti di ripartenza;
 - aprire automaticamente il round successivo da 10.000,00 € virtuali;
-- pubblicare percorso vincente e nonce soltanto dopo il settlement;
-- ricalcolare pubblicamente il commitment SHA-256 del round;
-- emettere una ricevuta immutabile `V-...` per ogni giocata terminale;
-- verificare ricevuta, percorso, esito e round dalla pagina pubblica `/verifica/{codice}`;
-- consultare lo storico pubblico dei round e lo stato della verifica;
-- mantenere ledger, ricevute e audit protetti da invarianti SQLite append-only;
-- eseguire simulazioni statistiche isolate e riproducibili senza modificare il gioco reale;
-- confrontare profili A/B uniformi e sintetici con bias configurabile;
-- misurare copertura, duplicati, entropia empirica e percorsi più frequenti;
-- consultare una dashboard amministrativa con metriche reali aggregate;
-- esportare in CSV i risultati delle simulazioni;
-- limitare server-side burst e replay sugli endpoint sensibili;
-- restringere `/admin/*` alla loopback per default;
-- applicare CSP e security header a tutte le risposte;
-- generare un `X-Request-Id` server-side per ogni richiesta;
-- scrivere eventi di sicurezza JSONL con redazione dei segreti;
-- applicare hardening SQLite runtime con foreign key, busy timeout, WAL e synchronous FULL;
-- distinguere liveness `/health` e readiness `/ready`;
-- eseguire diagnostica da `/admin/diagnostica` o `app:system:check`;
-- verificare integralmente la catena hash dell’audit.
+- pubblicare percorso vincente e nonce dopo il settlement e verificare il commitment;
+- emettere ricevute immutabili `V-...` e consultare lo storico pubblico;
+- eseguire simulazioni statistiche isolate e riproducibili;
+- applicare rate limiting, request ID, security logging e hardening SQLite;
+- usare CSP `script-src 'self'; style-src 'self'` senza CSS/JS inline;
+- mostrare pagine errore 403/404/429/500 coerenti e non informative;
+- verificare integralmente la catena hash dell'audit;
+- coprire con test E2E login/ruoli e percorso vincente 1/20 → reset globale/credito.
 
 ## Requisiti
 
@@ -64,6 +56,14 @@ php -S 127.0.0.1:8000 -t public
 ```
 
 Il bootstrap genera automaticamente un `APP_SECRET` casuale in `.env.local` se non è già presente. Il file è escluso da Git e non viene distribuito nello ZIP. L’area amministrativa è limitata per default a `127.0.0.1` e `::1` tramite `ADMIN_ALLOWED_IPS`.
+
+Dopo la prima migrazione crea il primo amministratore:
+
+```powershell
+php bin/console app:admin:create admin --role=SUPER_ADMIN
+```
+
+Se `--password` non è specificata, viene richiesta in modo nascosto. Non esistono credenziali predefinite nello ZIP.
 
 ## Errore `could not find driver`
 
@@ -102,12 +102,15 @@ php tools/domain-tests.php
 - `POST /gioca/inizia` — avvio o ripresa della giocata corrente
 - `/gioca/{codice}` — step corrente, protetto dalla sessione anonima
 - `POST /gioca/{codice}/scelta` — invio server-side della scelta
-- `/admin/round` — apertura e storico dei round
-- `/admin/simulazioni` — dashboard, nuova simulazione e storico dei run statistici
+- `/admin/login` — autenticazione amministrativa
+- `/admin` — dashboard amministrativa autorizzata per ruolo
+- `/admin/utenti` — gestione account amministrativi (`SUPER_ADMIN`)
+- `/admin/round` — apertura e storico dei round (`SUPER_ADMIN`, `OPERATOR`)
+- `/admin/simulazioni` — dashboard e storico; esecuzione nuova simulazione consentita a `SUPER_ADMIN`/`OPERATOR`
 - `/admin/simulazioni/{codice}` — dettaglio di una simulazione
 - `/admin/simulazioni/{codice}/csv` — esportazione CSV aggregata
-- `/admin/diagnostica` — controlli SQLite, spazio operativo e integrità audit
-- `/admin/scelte` — catalogo amministrativo delle coppie
+- `/admin/diagnostica` — controlli SQLite, spazio operativo e integrità audit (`SUPER_ADMIN`, `AUDITOR`)
+- `/admin/scelte` — catalogo amministrativo delle coppie (`SUPER_ADMIN`, `OPERATOR`)
 - `/admin/scelte/nuova` — creazione di una coppia regolare
 
 ## Apertura del round
@@ -164,14 +167,14 @@ Una giocata interrotta passa a `CREDITED`. Alla successiva partecipazione il cre
 
 ## Test
 
-Il bootstrap ricrea `var/test.db`, applica tutte le migrazioni ed esegue:
+`php bin/phpunit` ricrea autonomamente `var/test.db` e applica tutte le migrazioni prima della suite. Il bootstrap esegue quindi:
 
 ```bash
 php tools/domain-tests.php
 php bin/phpunit
 ```
 
-La suite M1.7 contiene **67 metodi PHPUnit**, pari a **69 casi effettivi** considerando il data provider di `WinningPathTest`. Il runner indipendente contiene **18 verifiche**.
+La suite M1.8.2 contiene **79 metodi PHPUnit**, pari a **81 casi effettivi** considerando il data provider di `WinningPathTest`. Il runner indipendente contiene **20 verifiche**.
 
 ## Documentazione
 
@@ -187,6 +190,8 @@ La suite M1.7 contiene **67 metodi PHPUnit**, pari a **69 casi effettivi** consi
 - `docs/10-simulation-statistics.md`
 - `docs/11-security-robustness.md`
 - `docs/12-operations-runbook.md`
+- `docs/13-admin-auth-e2e.md`
+- `docs/14-release-checklist.md`
 
 
 ## Simulazioni statistiche
@@ -205,7 +210,9 @@ Dettagli: `docs/10-simulation-statistics.md`.
 
 ## Sicurezza e diagnostica
 
-M1.7 introduce rate limiting SQLite-backed con chiavi HMAC, security header HTTP, request ID, log strutturato redatto e accesso amministrativo locale per default. Il JavaScript della giocata è servito da `public/play.js`, quindi la CSP non richiede `unsafe-inline` per gli script.
+M1.8 mantiene il rate limiting SQLite-backed, request ID, security logging e allowlist IP di M1.7, aggiungendo autenticazione amministrativa individuale e autorizzazioni per ruolo. La CSP non consente più inline script **né inline style**: JavaScript e CSS sono serviti da `public/play.js` e `public/app.css`.
+
+La sessione amministrativa usa il cookie `TWENTYCHOICESSESSID` con `HttpOnly`, `SameSite=Lax` e `Secure=auto`. Password, ruolo e stato account sono protetti da una `auth_version` monotona che invalida sessioni obsolete.
 
 Controllo operativo:
 

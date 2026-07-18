@@ -22,9 +22,19 @@ Il bootstrap:
 4. valida il kernel con `cache:clear`;
 5. applica le migrazioni;
 6. esegue `app:system:check`;
-7. ricrea completamente `var/test.db`, inclusi eventuali `-wal` e `-shm`;
-8. applica le migrazioni test;
-9. esegue test di dominio e PHPUnit.
+7. esegue i test di dominio;
+8. avvia `bin/phpunit`, che ricrea autonomamente `var/test.db` (inclusi eventuali `-wal` e `-shm`) e applica tutte le migrazioni test prima della suite.
+
+
+### Esecuzione diretta PHPUnit
+
+Anche l'esecuzione diretta è deterministica:
+
+```powershell
+php bin/phpunit
+```
+
+Il wrapper ricrea sempre il database SQLite di test prima di avviare PHPUnit. Questo evita che un test browser interrotto o fallito lasci round, giocate, rate limit o account che contaminino la successiva esecuzione. Per esigenze diagnostiche eccezionali il reset può essere saltato impostando `TWENTY_CHOICES_SKIP_TEST_DB_RESET=1`, ma non è la modalità normale di validazione.
 
 ## Avvio locale
 
@@ -62,7 +72,7 @@ Per consentire una rete privata esplicita:
 ADMIN_ALLOWED_IPS=127.0.0.1,::1,192.168.10.0/24
 ```
 
-Non usare `0.0.0.0/0` o `::/0` come scorciatoia: renderebbe l'area admin pubblicamente raggiungibile senza autenticazione.
+Non usare `0.0.0.0/0` o `::/0` come scorciatoia: eliminerebbe la barriera di rete aggiuntiva dell'allowlist e lascerebbe l'area admin esposta alla sola autenticazione applicativa.
 
 Dietro reverse proxy configurare correttamente i trusted proxy Symfony prima di affidarsi a `getClientIp()`. Non fidarsi automaticamente di header `X-Forwarded-For` provenienti da client arbitrari.
 
@@ -80,7 +90,7 @@ Prima di esporre l'applicazione:
 - configurare backup e rotazione log;
 - non pubblicare `var/data.db`, `var/log` o `.env.local` nella document root.
 
-M1.7 non include ancora autenticazione admin: una demo Internet con amministrazione remota richiede la milestone successiva.
+M1.8 richiede sia autenticazione individuale sia allowlist IP. Per una demo remota seguire anche `docs/14-release-checklist.md`.
 
 ## Security log
 
@@ -170,3 +180,13 @@ Verificare:
 - integrità audit.
 
 I test M1.7 coprono esplicitamente rollback completo quando fallisce la creazione del round successivo.
+
+## Gestione account amministrativi
+
+Primo account:
+
+```bash
+php bin/console app:admin:create admin --role=SUPER_ADMIN
+```
+
+Creare account distinti per persona e assegnare il ruolo minimo necessario. Il database impedisce la rimozione dell'ultimo `SUPER_ADMIN` attivo. Un cambio password, ruolo o stato invalida la sessione precedente tramite `auth_version`.

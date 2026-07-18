@@ -219,3 +219,53 @@ Correzione del ramo terminale di `OpenPlayStep`: nella chiamata posizionale al c
 
 Entrambe le costruzioni di `PlayScreen` usano ora argomenti nominati. Questo elimina la dipendenza dall'ordine posizionale dei 22 parametri e rende più sicure future estensioni del DTO. Il test `PlayFlowTest::testItRecordsAllTwentyChoicesWithoutCreatingTheNextStepEarly` verifica inoltre che, a giocata terminale, `availableAt` sia `NULL` e `verificationCode` sia valorizzato.
 
+
+## M1.8 — Autenticazione amministrativa, autorizzazioni, CSP ed E2E
+
+- Nona migrazione aggiunta con tabella `admin_user`.
+- Sequenza completa M0.2 → M1.8 applicata tramite harness SQLite: **15 tabelle applicative, 44 indici espliciti e 59 trigger**, catalogo invariato a 45 coppie.
+- Verificato il trigger che impedisce declassamento/disattivazione dell'ultimo `SUPER_ADMIN` attivo.
+- Password amministrative hashate con API native PHP; policy minima 12 caratteri, una lettera e una cifra.
+- Sessione dedicata `TWENTYCHOICESSESSID`, rigenerazione ID al login e invalidazione al logout.
+- `auth_version` invalida sessioni esistenti dopo cambio password, ruolo o stato account.
+- Matrice ruoli centralizzata deny-by-default per `SUPER_ADMIN`, `OPERATOR`, `AUDITOR`.
+- CSP aggiornata a `style-src 'self'`; nessun `style=` o `<style>` residuo nei template.
+- CSS spostato in `public/app.css`; progress dinamici convertiti a elementi HTML `<progress>`.
+- Pagine generiche 403/404/429/500 aggiunte senza dettagli interni.
+- Test browser aggiunti per login/logout, autorizzazioni di ruolo e percorso completo vincente 1/20 → 20/20 con reset globale e credito di una giocata concorrente.
+- `tools/domain-tests.php`: **20 verifiche indipendenti**, tutte superate nel pacchetto.
+- Suite predisposta: **79 metodi PHPUnit**, pari a **81 casi effettivi** considerando i 3 casi del data provider `WinningPathTest`.
+- Tutti i file PHP sotto `src`, `tests`, `migrations` e `tools` superano `php -l` con PHP 8.4 nell'ambiente di generazione.
+- La suite Symfony/PHPUnit completa deve essere confermata nell'ambiente dell'utente dopo l'applicazione della nona migrazione.
+
+## M1.8.1 — Isolamento E2E e database test deterministico
+
+Correzione successiva alla prima esecuzione completa M1.8 nell'ambiente Windows dell'utente. La suite evidenziava due problemi distinti:
+
+- `PlayJourneyE2ETest` sostituiva `SystemClock` con `FrozenClock`, ma il reboot del kernel tra richieste ricreava i servizi e faceva perdere il clock controllato; la giocata browser rimaneva quindi allo step 1 invece di completare il percorso vincente;
+- l'E2E lasciava nel database test il nuovo round `ACTIVE` creato dal settlement. Poiché `tests/EndToEnd` viene eseguito prima di `tests/Game`, i test applicativi successivi trovavano un round già attivo e fallivano con `An active round already exists`.
+
+Correzioni:
+
+- introdotto `TransactionalWebTestCase`, che usa `KernelBrowser::disableReboot()` e avvolge ciascun browser test in una transazione esterna sempre rollbackata in `tearDown`;
+- applicato l'isolamento a `PlayJourneyE2ETest`, `AdminAuthenticationE2ETest` e `SecurityHttpTest`;
+- il percorso E2E verifica ora dopo ogni POST che `current_step` sia avanzato esattamente di uno, intercettando immediatamente regressioni del clock/timer;
+- `bin/phpunit` elimina `var/test.db`, `var/test.db-wal` e `var/test.db-shm` e riapplica le migrazioni `--env=test` prima di ogni esecuzione, rendendo deterministico anche un semplice `php bin/phpunit` dopo una precedente suite interrotta;
+- gli script di bootstrap delegano a `bin/phpunit` la preparazione del database test, evitando doppio reset/migrazione.
+
+La revisione non modifica schema, regole di gioco, algoritmo di settlement o sicurezza runtime.
+
+
+
+## M1.8.2 — SQLite runtime prima della transazione E2E
+
+La prima esecuzione completa di M1.8.1 su Windows ha evidenziato che i browser test aprivano la transazione esterna prima della prima richiesta HTTP. `SqliteRuntimeConfigurator`, eseguito sul primo `kernel.request`, tentava quindi di applicare `PRAGMA synchronous = FULL` mentre la connessione era già in transazione. SQLite non consente di cambiare il livello `synchronous` dentro una transazione: la richiesta terminava con HTTP 500, il DOM risultava vuoto e i test di sicurezza ricevevano 500 al posto degli status attesi.
+
+Correzione:
+
+- `TransactionalWebTestCase::createTransactionalClient()` esegue esplicitamente `SqliteRuntimeConfigurator::configure()` subito dopo il boot del kernel e **prima** di `beginTransaction()`;
+- il configuratore resta idempotente tramite il flag interno `configured`, quindi il subscriber della prima richiesta non riapplica i PRAGMA;
+- la transazione esterna continua a garantire il rollback completo dei dati creati dagli E2E;
+- nessuna regola di gioco, schema dati o configurazione di produzione viene modificata.
+
+Questa correzione copre la causa comune dei 5 errori DOM vuoto e dei 4 fallimenti HTTP 500 osservati nella suite M1.8.1.

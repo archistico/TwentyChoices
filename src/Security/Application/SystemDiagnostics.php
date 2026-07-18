@@ -72,6 +72,16 @@ final readonly class SystemDiagnostics
             || (!is_dir($logDirectory) && is_writable(dirname($logDirectory)));
         $checks[] = $this->check('Log sicurezza', $logWritable, $logDirectory, 'Directory destinata a security.jsonl.');
 
+        $adminCount = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM admin_user');
+        $checks[] = [
+            'name' => 'Account amministrativi',
+            'status' => $adminCount > 0 ? 'ok' : 'warning',
+            'value' => (string) $adminCount,
+            'detail' => $adminCount > 0
+                ? 'È presente almeno un account amministrativo.'
+                : 'Crea il primo account con app:admin:create prima di usare /admin.',
+        ];
+
         $statuses = array_column($checks, 'status');
         $status = in_array('error', $statuses, true)
             ? 'error'

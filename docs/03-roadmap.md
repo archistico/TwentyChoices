@@ -120,11 +120,24 @@
 
 ## M1.8 — Accesso amministrativo, E2E e rifinitura UI
 
-- [ ] Autenticazione amministrativa reale con password hashata e sessione dedicata.
-- [ ] Ruoli/authorization espliciti per tutte le operazioni `/admin`.
-- [ ] Eliminazione di `style-src 'unsafe-inline'` dalla CSP.
-- [ ] Rifinitura responsive e accessibilità tastiera/screen reader.
-- [ ] Test end-to-end browser del percorso completo 1/20 → risultato.
-- [ ] Test E2E di vincita, reset globale e credito di ripartenza.
-- [ ] Pagine errore 403/404/429/500 coerenti e non informative.
-- [ ] Checklist release e configurazione demo remota sicura.
+- [x] Autenticazione amministrativa reale con password hashata e sessione dedicata.
+- [x] Ruoli/authorization espliciti per tutte le operazioni `/admin`.
+- [x] Invalidazione sessioni tramite `auth_version` dopo revoca/password/ruolo.
+- [x] Protezione DB dell'ultimo `SUPER_ADMIN` attivo.
+- [x] Eliminazione di `style-src 'unsafe-inline'` dalla CSP.
+- [x] CSS esterno, focus visibile, skip link e reduced-motion.
+- [x] Rifinitura responsive e accessibilità tastiera/screen reader.
+- [x] Test end-to-end browser del percorso completo 1/20 → risultato.
+- [x] Test E2E di vincita, reset globale e credito di ripartenza.
+- [x] Test E2E login/logout e matrice ruoli.
+- [x] Pagine errore 403/404/429/500 coerenti e non informative.
+- [x] Checklist release e configurazione demo remota sicura.
+
+## M2.1 — Esperienza di gioco e contenuti
+
+- [ ] Curatela delle coppie per varietà, ambiguità e interesse visivo.
+- [ ] Gruppi/temi e regole per evitare domande semanticamente troppo simili nello stesso round.
+- [ ] Miglioramento visuale della scelta, transizioni accessibili e feedback senza rivelare informazioni sul percorso.
+- [ ] Modalità demo guidata e onboarding del primo utilizzo.
+- [ ] Statistiche editoriali sulle coppie più sbilanciate, senza profilazione individuale.
+- [ ] Test di usabilità mobile e desktop.

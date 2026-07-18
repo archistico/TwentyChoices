@@ -1,0 +1,32 @@
+{% extends 'base.html.twig' %}
+{% block title %}Amministratori · TwentyChoices{% endblock %}
+{% block body %}
+<div class="page-header">
+    <div><div class="eyebrow">Sicurezza</div><h1>Amministratori</h1><p>Account locali con password hashata e autorizzazioni per ruolo.</p></div>
+    <a class="button button-primary" href="{{ path('admin_user_create') }}">Nuovo amministratore</a>
+</div>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Username</th><th>Ruolo</th><th>Stato</th><th>Ultimo accesso</th><th>Azioni</th></tr></thead>
+<tbody>
+{% for user in users %}
+<tr>
+    <td><strong>{{ user.username }}</strong></td>
+    <td>{{ user.role }}</td>
+    <td>{% if user.is_active %}<span class="badge badge-success">Attivo</span>{% else %}<span class="badge badge-muted">Disattivato</span>{% endif %}</td>
+    <td>{{ user.last_login_at ?: 'Mai' }}</td>
+    <td class="actions-cell">
+        <a class="button button-quiet" href="{{ path('admin_user_edit', {id: user.id}) }}">Modifica</a>
+        <form method="post" action="{{ path('admin_user_toggle', {id: user.id}) }}" class="inline-form">
+            <input type="hidden" name="_token" value="{{ csrf_token('admin_user_toggle_' ~ user.id) }}">
+            <button class="button {{ user.is_active ? 'button-danger' : '' }}" type="submit">{{ user.is_active ? 'Disattiva' : 'Riattiva' }}</button>
+        </form>
+    </td>
+</tr>
+{% else %}
+<tr><td colspan="5">Nessun amministratore configurato.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

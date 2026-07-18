@@ -15,7 +15,7 @@
         <div class="notice">
             Il montepremio virtuale è stato congelato e assegnato a questa giocata. Tutte le giocate ancora aperte del vecchio round sono state interrotte e accreditate; un nuovo round è già iniziato da 10.000,00 € virtuali.
         </div>
-        <div class="actions" style="margin-top: 22px">
+        <div class="actions margin-top-lg">
             {% if play.activeRoundPublicCode %}
                 <a class="button button-primary" href="{{ path('app_round_show', {publicCode: play.activeRoundPublicCode}) }}">Vedi il nuovo round</a>
             {% endif %}
@@ -30,7 +30,7 @@
             <strong>{{ play.participationNumber|number_format(0, ',', '.') }}</strong>, è stata registrata e validata come non vincente.
         </p>
         <div class="notice">Non viene indicato quale scelta differiva dal percorso segreto. Se il round è ancora attivo puoi iniziare una nuova partecipazione.</div>
-        <div class="actions" style="margin-top: 22px">
+        <div class="actions margin-top-lg">
             {% if play.activeRoundPublicCode == play.roundPublicCode %}
                 <form method="post" action="{{ path('app_play_start') }}" class="inline-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('start_play') }}">
@@ -46,7 +46,7 @@
         <p>La tua giocata <strong>{{ play.playPublicCode }}</strong> è stata interrotta quando il precedente round è stato chiuso.</p>
         {% if play.restartCreditAvailable %}
             <div class="notice">Hai ricevuto automaticamente un credito gratuito. Ripartirai dalla scelta 1/20 nel nuovo round senza aggiungere una seconda quota virtuale al montepremio.</div>
-            <div class="actions" style="margin-top: 22px">
+            <div class="actions margin-top-lg">
                 <form method="post" action="{{ path('app_play_start') }}" class="inline-form">
                     <input type="hidden" name="_token" value="{{ csrf_token('start_play') }}">
                     <button class="button button-primary" type="submit">Ricomincia gratuitamente</button>
@@ -57,20 +57,20 @@
             </div>
         {% else %}
             <div class="notice">Il credito di ripartenza associato a questa giocata risulta già utilizzato.</div>
-            <div class="actions" style="margin-top: 22px"><a class="button button-primary" href="{{ path('app_home') }}">Torna alla home</a></div>
+            <div class="actions margin-top-lg"><a class="button button-primary" href="{{ path('app_home') }}">Torna alla home</a></div>
         {% endif %}
     {% else %}
         <div class="eyebrow">Giocata conclusa</div>
         <h1>La giocata non è più attiva</h1>
         <p>Stato: <strong>{{ play.status }}</strong>.</p>
-        <div class="actions" style="margin-top: 22px"><a class="button button-primary" href="{{ path('app_home') }}">Torna alla home</a></div>
+        <div class="actions margin-top-lg"><a class="button button-primary" href="{{ path('app_home') }}">Torna alla home</a></div>
     {% endif %}
 
     {% if play.verificationCode %}
-        <div class="notice" style="margin-top: 24px">
+        <div class="notice margin-top-lg">
             <strong>Codice di verifica:</strong> <code>{{ play.verificationCode }}</code><br>
             <span class="help">La ricevuta è immutabile. Dopo il settlement del round potrà verificare anche il percorso vincente contro il commitment originario.</span>
-            <div class="actions" style="margin-top: 12px">
+            <div class="actions margin-top-sm">
                 <a class="button" href="{{ path('app_verification_receipt', {verificationCode: play.verificationCode}) }}">Verifica la giocata</a>
             </div>
         </div>

@@ -22,17 +22,17 @@
     <div class="summary-item"><span class="summary-value">{{ run.coveragePercentFormatted }}</span><span class="summary-label">Spazio coperto su 1.048.576</span></div>
 </div>
 
-<section class="panel" style="margin-bottom: 24px">
-    <div class="summary" style="margin: 0">
+<section class="panel margin-bottom-lg">
+    <div class="summary margin-zero">
         <div class="summary-item"><span class="summary-value">{{ run.duplicatePercentFormatted }}</span><span class="summary-label">Quota duplicati</span></div>
         <div class="summary-item"><span class="summary-value">{{ run.entropyFormatted }}</span><span class="summary-label">Entropia empirica</span></div>
         <div class="summary-item"><span class="summary-value">{{ run.effectivePathCount|number_format(0, ',', '.') }}</span><span class="summary-label">Percorsi effettivi osservati</span></div>
         <div class="summary-item"><span class="summary-value">{{ run.maxPathHits|number_format(0, ',', '.') }}</span><span class="summary-label">Massima frequenza singolo percorso</span></div>
     </div>
-    <p class="help" style="margin-top: 16px">L'entropia è calcolata sulla distribuzione empirica del campione: per campioni piccoli è naturalmente limitata dal numero di giocate osservate.</p>
+    <p class="help margin-top-md">L'entropia è calcolata sulla distribuzione empirica del campione: per campioni piccoli è naturalmente limitata dal numero di giocate osservate.</p>
 </section>
 
-<section style="margin-bottom: 30px">
+<section class="margin-bottom-xl">
     <h2>Distribuzione A/B per step</h2>
     <div class="table-wrap">
         <table>
@@ -46,11 +46,8 @@
                     <td>{{ (stat.probabilityABasisPoints / 100)|number_format(2, ',', '.') }}%</td>
                     <td>{{ stat.optionACount|number_format(0, ',', '.') }}</td>
                     <td>{{ stat.optionBCount|number_format(0, ',', '.') }}</td>
-                    <td style="min-width:260px">
-                        <div class="stat-bar" title="A {{ aPercent|number_format(2, ',', '.') }}% / B {{ (100-aPercent)|number_format(2, ',', '.') }}%">
-                            <span class="stat-bar-a" style="width: {{ aPercent }}%"></span>
-                            <span class="stat-bar-b" style="width: {{ 100-aPercent }}%"></span>
-                        </div>
+                    <td class="stat-cell">
+                        <progress class="stat-progress" max="100" value="{{ aPercent }}" aria-label="Scelte A: {{ aPercent|number_format(2, ',', '.') }}%; scelte B: {{ (100-aPercent)|number_format(2, ',', '.') }}%"></progress>
                         <div class="help">A {{ aPercent|number_format(2, ',', '.') }}% · B {{ (100-aPercent)|number_format(2, ',', '.') }}%</div>
                     </td>
                 </tr>

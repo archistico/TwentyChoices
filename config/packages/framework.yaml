@@ -2,6 +2,10 @@ framework:
     secret: '%env(APP_SECRET)%'
     csrf_protection: true
     handle_all_throwables: true
-    session: true
+    session:
+        name: TWENTYCHOICESSESSID
+        cookie_httponly: true
+        cookie_samesite: lax
+        cookie_secure: auto
     php_errors:
         log: true

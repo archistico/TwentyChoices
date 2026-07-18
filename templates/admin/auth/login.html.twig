@@ -1,0 +1,22 @@
+{% extends 'base.html.twig' %}
+{% block title %}Accesso amministrativo · TwentyChoices{% endblock %}
+{% block body %}
+<section class="panel auth-panel">
+    <div class="eyebrow">Area riservata</div>
+    <h1 class="page-title-medium">Accesso amministrativo</h1>
+    <p>Inserisci le credenziali di un account amministrativo attivo.</p>
+    {% if error %}<div class="error-box" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" action="{{ path('admin_login') }}" class="form-stack">
+        <input type="hidden" name="_token" value="{{ csrf_token('admin_login') }}">
+        <div class="field">
+            <label for="username">Username</label>
+            <input id="username" name="username" value="{{ username }}" autocomplete="username" required autofocus>
+        </div>
+        <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="button button-primary" type="submit">Accedi</button>
+    </form>
+</section>
+{% endblock %}

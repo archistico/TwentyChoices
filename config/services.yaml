@@ -17,6 +17,8 @@ services:
             - '../src/Game/Domain/'
             - '../src/Catalog/Domain/'
             - '../src/Simulation/Domain/'
+            - '../src/Security/Admin/AdminIdentity.php'
+            - '../src/Security/Admin/AdminRole.php'
 
     App\Catalog\Domain\Repository\ChoicePairRepository:
         alias: App\Catalog\Infrastructure\Persistence\DoctrineDbalChoicePairRepository

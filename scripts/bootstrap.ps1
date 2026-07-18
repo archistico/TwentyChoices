@@ -69,21 +69,6 @@ php --ini
     throw $message
 }
 
-function Reset-TestSqliteDatabase {
-    $varDir = Join-Path $PSScriptRoot "..\var"
-    $testDatabase = Join-Path $varDir "test.db"
-
-    if (-not (Test-Path -LiteralPath $varDir)) {
-        New-Item -ItemType Directory -Path $varDir | Out-Null
-    }
-
-    foreach ($path in @($testDatabase, "$testDatabase-wal", "$testDatabase-shm")) {
-        if (Test-Path -LiteralPath $path) {
-            Remove-Item -LiteralPath $path -Force
-        }
-    }
-}
-
 $varDir = Join-Path $PSScriptRoot "..\var"
 if (-not (Test-Path -LiteralPath $varDir)) {
     New-Item -ItemType Directory -Path $varDir | Out-Null
@@ -121,10 +106,10 @@ Invoke-Checked "php" @("bin/console", "cache:clear")
 Invoke-Checked "php" @("bin/console", "doctrine:migrations:migrate", "--no-interaction")
 Invoke-Checked "php" @("bin/console", "app:system:check")
 
-# Il database di test deve essere sempre ricreato per rendere deterministici seed e test di persistenza.
-Reset-TestSqliteDatabase
-Invoke-Checked "php" @("bin/console", "doctrine:migrations:migrate", "--no-interaction", "--env=test")
+# bin/phpunit ricrea autonomamente var/test.db e applica tutte le migrazioni,
+# rendendo deterministica anche l'esecuzione diretta della suite dopo un test fallito.
 Invoke-Checked "php" @("tools/domain-tests.php")
 Invoke-Checked "php" @("bin/phpunit")
 
 Write-Host "TwentyChoices inizializzato correttamente." -ForegroundColor Green
+Write-Host "Se non hai ancora un account amministrativo: php bin/console app:admin:create admin --role=SUPER_ADMIN" -ForegroundColor Yellow

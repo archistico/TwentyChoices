@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Security\Http;
 
+use App\Security\Admin\AdminAccessPolicy;
+use App\Security\Admin\AdminAuthentication;
 use App\Security\Application\RequestRateLimiter;
 use App\Security\Application\SecurityEventLogger;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\IpUtils;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -15,7 +18,9 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Uid\Uuid;
+use Twig\Environment;
 
 final readonly class SecurityRequestSubscriber implements EventSubscriberInterface
 {
@@ -24,6 +29,10 @@ final readonly class SecurityRequestSubscriber implements EventSubscriberInterfa
     public function __construct(
         private RequestRateLimiter $rateLimiter,
         private SecurityEventLogger $securityLog,
+        private AdminAuthentication $adminAuthentication,
+        private AdminAccessPolicy $adminAccessPolicy,
+        private UrlGeneratorInterface $urls,
+        private Environment $twig,
         private string $adminAllowedIps,
         private string $kernelEnvironment,
     ) {
@@ -48,16 +57,44 @@ final readonly class SecurityRequestSubscriber implements EventSubscriberInterfa
         $requestId = (string) Uuid::v7();
         $request->attributes->set('_twenty_request_id', $requestId);
 
-        if (str_starts_with($request->getPathInfo(), '/admin') && !$this->adminAccessAllowed($request)) {
-            $fingerprint = $this->rateLimiter->fingerprint($request->getClientIp() ?? 'unknown');
-            $this->securityLog->log('ADMIN_ACCESS_DENIED', [
-                'requestId' => $requestId,
-                'route' => $request->attributes->getString('_route'),
-                'clientFingerprint' => substr($fingerprint, 0, 16),
-            ]);
-            $event->setResponse(new Response('Accesso amministrativo non consentito da questa rete.', Response::HTTP_FORBIDDEN));
+        if (str_starts_with($request->getPathInfo(), '/admin')) {
+            if (!$this->adminAccessAllowed($request)) {
+                $fingerprint = $this->rateLimiter->fingerprint($request->getClientIp() ?? 'unknown');
+                $this->securityLog->log('ADMIN_ACCESS_DENIED', [
+                    'requestId' => $requestId,
+                    'route' => $request->attributes->getString('_route'),
+                    'clientFingerprint' => substr($fingerprint, 0, 16),
+                    'reason' => 'ip_not_allowed',
+                ]);
+                $event->setResponse($this->errorResponse(403, 'Accesso negato', 'Questa area non è disponibile dalla rete corrente.'));
 
-            return;
+                return;
+            }
+
+            $route = $request->attributes->getString('_route');
+            if ($route !== 'admin_login') {
+                $identity = $this->adminAuthentication->current();
+                if ($identity === null) {
+                    if ($request->isMethodSafe()) {
+                        $request->getSession()->set('twenty_admin_target', $request->getRequestUri());
+                    }
+                    $event->setResponse(new RedirectResponse($this->urls->generate('admin_login')));
+
+                    return;
+                }
+
+                if (!$this->adminAccessPolicy->allows($identity, $route)) {
+                    $this->securityLog->log('ADMIN_AUTHORIZATION_DENIED', [
+                        'requestId' => $requestId,
+                        'adminId' => $identity->id,
+                        'role' => $identity->role->value,
+                        'route' => $route,
+                    ]);
+                    $event->setResponse($this->errorResponse(403, 'Operazione non autorizzata', 'Il tuo ruolo non consente questa operazione.'));
+
+                    return;
+                }
+            }
         }
 
         foreach ($this->limitsFor($request) as $rule) {
@@ -81,10 +118,7 @@ final readonly class SecurityRequestSubscriber implements EventSubscriberInterfa
                 'retryAfterSeconds' => $decision->retryAfterSeconds,
             ]);
 
-            $response = new Response(
-                'Troppe richieste. Riprova tra '.$decision->retryAfterSeconds.' secondi.',
-                Response::HTTP_TOO_MANY_REQUESTS,
-            );
+            $response = $this->errorResponse(429, 'Troppe richieste', 'Attendi qualche secondo e riprova.');
             $response->headers->set('Retry-After', (string) $decision->retryAfterSeconds);
             $event->setResponse($response);
 
@@ -113,7 +147,7 @@ final readonly class SecurityRequestSubscriber implements EventSubscriberInterfa
         $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
         $response->headers->set(
             'Content-Security-Policy',
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+            "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
         );
 
         if (str_starts_with($request->getPathInfo(), '/gioca') || str_starts_with($request->getPathInfo(), '/admin')) {
@@ -135,16 +169,26 @@ final readonly class SecurityRequestSubscriber implements EventSubscriberInterfa
         $request = $event->getRequest();
         $throwable = $event->getThrowable();
         $statusCode = $throwable instanceof HttpExceptionInterface ? $throwable->getStatusCode() : 500;
-        if ($statusCode < 500 && $statusCode !== 403) {
+        if ($statusCode >= 500 || in_array($statusCode, [403, 404, 429], true)) {
+            $this->securityLog->log('HTTP_EXCEPTION', [
+                'requestId' => $request->attributes->getString('_twenty_request_id'),
+                'route' => $request->attributes->getString('_route'),
+                'statusCode' => $statusCode,
+                'exceptionClass' => $throwable::class,
+            ]);
+        }
+
+        if (!in_array($statusCode, [403, 404, 429, 500], true)) {
             return;
         }
 
-        $this->securityLog->log('HTTP_EXCEPTION', [
-            'requestId' => $request->attributes->getString('_twenty_request_id'),
-            'route' => $request->attributes->getString('_route'),
-            'statusCode' => $statusCode,
-            'exceptionClass' => $throwable::class,
-        ]);
+        $copy = match ($statusCode) {
+            403 => ['Accesso negato', 'Non hai i permessi necessari per questa operazione.'],
+            404 => ['Pagina non trovata', 'La risorsa richiesta non esiste o non è più disponibile.'],
+            429 => ['Troppe richieste', 'Attendi qualche secondo e riprova.'],
+            default => ['Errore interno', 'Si è verificato un errore inatteso. Nessun dato sensibile è stato mostrato.'],
+        };
+        $event->setResponse($this->errorResponse($statusCode, $copy[0], $copy[1]));
     }
 
     private function adminAccessAllowed(Request $request): bool
@@ -160,6 +204,15 @@ final readonly class SecurityRequestSubscriber implements EventSubscriberInterfa
         }
 
         return IpUtils::checkIp($ip, $allowed);
+    }
+
+    private function errorResponse(int $status, string $title, string $message): Response
+    {
+        return new Response($this->twig->render('error/status.html.twig', [
+            'status' => $status,
+            'title' => $title,
+            'message' => $message,
+        ]), $status);
     }
 
     /** @return list<array{scope:string,subject:string,limit:int,window:int}> */
@@ -184,14 +237,18 @@ final readonly class SecurityRequestSubscriber implements EventSubscriberInterfa
             'app_verification_receipt' => [
                 ['scope' => 'verification_ip', 'subject' => 'ip:'.$ip, 'limit' => 120, 'window' => 60],
             ],
+            'admin_login' => [
+                ['scope' => 'admin_login_ip', 'subject' => 'ip:'.$ip, 'limit' => 12, 'window' => 300],
+            ],
             'admin_round_open' => [
                 ['scope' => 'admin_round_open_ip', 'subject' => 'ip:'.$ip, 'limit' => 10, 'window' => 60],
             ],
             'admin_simulation_run' => [
                 ['scope' => 'admin_simulation_run_ip', 'subject' => 'ip:'.$ip, 'limit' => 6, 'window' => 60],
             ],
-            'admin_choice_pair_create', 'admin_choice_pair_edit', 'admin_choice_pair_toggle', 'admin_choice_pair_delete' => [
-                ['scope' => 'admin_catalog_write_ip', 'subject' => 'ip:'.$ip, 'limit' => 30, 'window' => 60],
+            'admin_choice_pair_create', 'admin_choice_pair_edit', 'admin_choice_pair_toggle', 'admin_choice_pair_delete',
+            'admin_user_create', 'admin_user_edit', 'admin_user_password', 'admin_user_toggle' => [
+                ['scope' => 'admin_write_ip', 'subject' => 'ip:'.$ip, 'limit' => 30, 'window' => 60],
             ],
             default => [],
         };

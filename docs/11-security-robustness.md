@@ -241,9 +241,13 @@ Una seconda sessione conserva un vecchio challenge aperto. Dopo la validazione d
 
 ## Limiti espliciti
 
-1. L'area admin è protetta per rete, non ancora tramite autenticazione individuale.
+1. L'area admin richiede autenticazione individuale e resta anche protetta da allowlist di rete.
 2. La catena audit è locale e non ancorata a un servizio esterno.
 3. Il rate limit è applicativo e SQLite-backed: non sostituisce un limite a reverse proxy/WAF.
-4. La CSP mantiene `style-src 'unsafe-inline'` per compatibilità con la UI corrente.
+4. La CSP usa `style-src 'self'`; CSS e JavaScript applicativi sono risorse esterne same-origin.
 5. Il security log non ha ancora rotazione interna; va gestito a livello operativo.
 6. SQLite resta adatto al prototipo, non a un carico elevato di writer concorrenti.
+
+## Evoluzione M1.8
+
+L'autenticazione amministrativa, la matrice ruoli, l'invalidazione sessioni e la CSP senza `unsafe-inline` sono descritte in `docs/13-admin-auth-e2e.md`.

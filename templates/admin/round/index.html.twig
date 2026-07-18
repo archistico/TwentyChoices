@@ -20,10 +20,10 @@
 </div>
 
 {% if activeRound %}
-    <section class="panel" style="margin-bottom: 24px">
+    <section class="panel margin-bottom-lg">
         <div class="eyebrow">Round attivo</div>
-        <h2 style="margin-top: 8px"><a href="{{ path('app_round_show', {publicCode: activeRound.publicCode}) }}">{{ activeRound.publicCode }}</a></h2>
-        <div class="summary" style="margin-top: 24px; margin-bottom: 0">
+        <h2 class="margin-top-sm"><a href="{{ path('app_round_show', {publicCode: activeRound.publicCode}) }}">{{ activeRound.publicCode }}</a></h2>
+        <div class="summary margin-top-lg margin-zero-bottom">
             <div class="summary-item">
                 <span class="summary-value">{{ activeRound.currentJackpotFormatted }}</span>
                 <span class="summary-label">Montepremio virtuale</span>
@@ -48,7 +48,7 @@
 {% endif %}
 
 <section>
-    <h2 style="margin-bottom: 14px">Storico recente</h2>
+    <h2 class="margin-bottom-md">Storico recente</h2>
     <div class="table-wrap">
         <table>
             <thead>

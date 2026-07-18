@@ -1,0 +1,10 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ status }} · TwentyChoices{% endblock %}
+{% block body %}
+<section class="panel narrow-panel error-page" role="alert">
+    <div class="eyebrow">Errore {{ status }}</div>
+    <h1 class="page-title-medium">{{ title }}</h1>
+    <p>{{ message }}</p>
+    <div class="actions margin-top-lg"><a class="button" href="{{ path('app_home') }}">Torna alla home</a></div>
+</section>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'base.html.twig' %}
+{% block title %}Amministrazione · TwentyChoices{% endblock %}
+{% block body %}
+<div class="page-header">
+    <div><div class="eyebrow">Amministrazione</div><h1>Dashboard</h1><p>Sessione autenticata come <strong>{{ admin.username }}</strong> · {{ admin.role.label }}.</p></div>
+</div>
+<div class="admin-grid">
+    {% if admin.role.value in ['SUPER_ADMIN', 'OPERATOR'] %}
+        <a class="admin-card" href="{{ path('admin_choice_pair_index') }}"><strong>Catalogo scelte</strong><span>Gestisci le coppie e la porta finale.</span></a>
+        <a class="admin-card" href="{{ path('admin_round_index') }}"><strong>Round</strong><span>Apri e consulta i round operativi.</span></a>
+    {% endif %}
+    <a class="admin-card" href="{{ path('admin_simulation_index') }}"><strong>Simulazioni</strong><span>Statistiche e run sintetici isolati.</span></a>
+    {% if admin.role.value in ['SUPER_ADMIN', 'AUDITOR'] %}
+        <a class="admin-card" href="{{ path('admin_diagnostics_index') }}"><strong>Diagnostica</strong><span>Integrità, audit e stato SQLite.</span></a>
+    {% endif %}
+    {% if admin.role.value == 'SUPER_ADMIN' %}
+        <a class="admin-card" href="{{ path('admin_user_index') }}"><strong>Amministratori</strong><span>Account, ruoli, password e stato.</span></a>
+    {% endif %}
+</div>
+{% endblock %}

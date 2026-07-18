@@ -1,0 +1,48 @@
+# Checklist release demo
+
+## Prima di esporre una demo
+
+- [ ] `APP_ENV=prod`.
+- [ ] `APP_SECRET` casuale, lungo, privato e non versionato.
+- [ ] HTTPS obbligatorio sul reverse proxy.
+- [ ] `DEFAULT_URI` impostato sull'origin HTTPS reale.
+- [ ] `ADMIN_ALLOWED_IPS` ristretto alle reti amministrative necessarie.
+- [ ] Creato almeno un `SUPER_ADMIN` con password unica.
+- [ ] Creato un account separato per ogni operatore/auditor; nessun account condiviso.
+- [ ] Verificato `php bin/console app:system:check`.
+- [ ] Backup SQLite coerente provato con ripristino e `PRAGMA integrity_check`.
+- [ ] `var/`, `.env.local` e database esclusi dalla document root.
+- [ ] Rate limit aggiuntivo configurato sul reverse proxy/WAF.
+- [ ] Rotazione e retention di `var/log/security.jsonl` configurate.
+- [ ] Header HTTPS/HSTS verificati dall'esterno.
+- [ ] Nessun account demo con password predefinita.
+- [ ] Nessun importo reale, pagamento o premio convertibile abilitato.
+
+## Comandi di verifica
+
+```bash
+php bin/console doctrine:migrations:migrate --no-interaction
+php bin/console app:system:check
+php tools/domain-tests.php
+php bin/phpunit
+```
+
+## Primo amministratore
+
+```bash
+php bin/console app:admin:create admin --role=SUPER_ADMIN
+```
+
+La password viene richiesta in modo nascosto se `--password` non è specificata.
+
+## Configurazione demo remota
+
+L'autenticazione non sostituisce l'allowlist IP. Per una demo remota mantenere entrambe:
+
+1. autenticazione individuale;
+2. `ADMIN_ALLOWED_IPS` limitato a VPN, IP statici o rete amministrativa;
+3. TLS terminato da reverse proxy affidabile;
+4. backup automatici e monitoraggio spazio disco;
+5. nessuna esposizione diretta del server PHP built-in su Internet.
+
+Il server `php -S` resta destinato esclusivamente allo sviluppo locale.

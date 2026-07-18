@@ -52,8 +52,8 @@
         </noscript>
     </form>
 
-    <div class="play-progress" aria-label="Avanzamento giocata">
-        <div class="play-progress-bar" style="width: {{ (play.displayedStep / 20 * 100)|round(2) }}%"></div>
+    <div class="play-progress">
+        <progress class="progress-native" max="20" value="{{ play.displayedStep }}" aria-label="Avanzamento giocata: {{ play.displayedStep }} di 20"></progress>
     </div>
     <p class="play-security-note">Il timer, lo step corrente e la validità della scelta sono controllati dal server. Ricaricare la pagina non azzera l’attesa.</p>
 </section>
