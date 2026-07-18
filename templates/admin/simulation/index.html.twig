@@ -1,0 +1,93 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Simulazioni e statistiche — TwentyChoices{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">M1.6 · Amministrazione</div>
+        <h1>Simulazioni e statistiche</h1>
+        <p>Le simulazioni sono isolate: non creano giocate reali, non modificano round, jackpot, ledger, ricevute o audit.</p>
+    </div>
+</div>
+
+<section class="panel" style="margin-bottom: 24px">
+    <div class="eyebrow">Metriche del simulatore reale</div>
+    <div class="summary" style="margin-top: 18px; margin-bottom: 0">
+        <div class="summary-item"><span class="summary-value">{{ gameMetrics.totalPlays|number_format(0, ',', '.') }}</span><span class="summary-label">Giocate registrate</span></div>
+        <div class="summary-item"><span class="summary-value">{{ gameMetrics.distinctCompletedPaths|number_format(0, ',', '.') }}</span><span class="summary-label">Percorsi completi distinti</span></div>
+        <div class="summary-item"><span class="summary-value">{{ gameMetrics.avgPlaySeconds|number_format(1, ',', '.') }} s</span><span class="summary-label">Durata media giocata</span></div>
+        <div class="summary-item"><span class="summary-value">{{ gameMetrics.avgRoundSeconds|number_format(1, ',', '.') }} s</span><span class="summary-label">Durata media round chiusi</span></div>
+    </div>
+    <div class="summary" style="margin-top: 14px; margin-bottom: 0">
+        <div class="summary-item"><span class="summary-value">{{ gameMetrics.wonPlays|number_format(0, ',', '.') }}</span><span class="summary-label">Vinte</span></div>
+        <div class="summary-item"><span class="summary-value">{{ gameMetrics.lostPlays|number_format(0, ',', '.') }}</span><span class="summary-label">Perse</span></div>
+        <div class="summary-item"><span class="summary-value">{{ gameMetrics.interruptedPlays|number_format(0, ',', '.') }}</span><span class="summary-label">Interrotte / accreditate</span></div>
+        <div class="summary-item"><span class="summary-value">€ {{ (gameMetrics.jackpotContributionCents / 100)|number_format(2, ',', '.') }}</span><span class="summary-label">Contributi jackpot virtuali</span></div>
+        <div class="summary-item"><span class="summary-value">€ {{ (gameMetrics.organizerShareCents / 100)|number_format(2, ',', '.') }}</span><span class="summary-label">Quota organizzazione virtuale</span></div>
+    </div>
+</section>
+
+<section class="panel" style="margin-bottom: 28px">
+    <div class="eyebrow">Nuova simulazione sintetica</div>
+    <h2>Genera percorsi</h2>
+    <p class="muted">I profili con bias sono modelli sintetici e non rappresentano dati reali sul comportamento umano. Lo stesso seed e gli stessi parametri producono lo stesso campione.</p>
+    <form method="post" action="{{ path('admin_simulation_run') }}" class="form-grid" style="margin-top: 22px">
+        <input type="hidden" name="_token" value="{{ csrf_token('simulation_run') }}">
+        <div class="field">
+            <label for="plays">Numero di giocate</label>
+            <input id="plays" name="plays" type="number" min="1" max="{{ webMaxPlays }}" value="100000" required>
+            <div class="help">Dal browser: massimo {{ webMaxPlays|number_format(0, ',', '.') }}. Per volumi maggiori usa il comando CLI.</div>
+        </div>
+        <div class="field">
+            <label for="profile">Profilo</label>
+            <select id="profile" name="profile" class="select-input">
+                {% for profile in profiles %}
+                    <option value="{{ profile.value }}">{{ profile.label }}</option>
+                {% endfor %}
+            </select>
+            <div class="help">Uniforme 50/50, bias costante verso A oppure bias alternato tra A e B.</div>
+        </div>
+        <div class="field">
+            <label for="bias_percent">Preferenza base A (%)</label>
+            <input id="bias_percent" name="bias_percent" type="number" min="50" max="95" step="0.01" value="70" required>
+            <div class="help">Ignorata dal profilo uniforme. Nel profilo alternato diventa A sugli step dispari e B sugli step pari.</div>
+        </div>
+        <div class="field">
+            <label for="seed">Seed riproducibile</label>
+            <input id="seed" name="seed" type="number" min="0" max="2147483647" value="20260718" required>
+            <div class="help">Permette di ripetere esattamente la stessa simulazione.</div>
+        </div>
+        <div class="field-full form-footer">
+            <button class="button button-primary" type="submit">Esegui simulazione</button>
+        </div>
+    </form>
+    <div class="notice" style="margin-top: 18px">
+        Per simulazioni fino a 1.000.000 di giocate: <code>php bin/console app:simulation:run --plays=1000000 --profile=UNIFORM --seed=20260718</code>
+    </div>
+</section>
+
+<section>
+    <h2 style="margin-bottom: 14px">Simulazioni recenti</h2>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Codice</th><th>Profilo</th><th>Giocate</th><th>Percorsi distinti</th><th>Duplicati</th><th>Copertura</th><th>Durata</th></tr></thead>
+            <tbody>
+            {% for run in recentRuns %}
+                <tr>
+                    <td><a href="{{ path('admin_simulation_show', {publicCode: run.publicCode}) }}"><code>{{ run.publicCode }}</code></a></td>
+                    <td>{{ run.profile }}</td>
+                    <td>{{ run.plays|number_format(0, ',', '.') }}</td>
+                    <td>{{ run.uniquePaths|number_format(0, ',', '.') }}</td>
+                    <td>{{ run.duplicatePlays|number_format(0, ',', '.') }}</td>
+                    <td>{{ run.coveragePercentFormatted }}</td>
+                    <td>{{ run.durationMs|number_format(0, ',', '.') }} ms</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7">Nessuna simulazione ancora eseguita.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

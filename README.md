@@ -6,15 +6,46 @@ Prototipo gratuito e simulatore tecnico di un gioco a venti scelte binarie. Ogni
 
 ## Stato del progetto
 
-Milestone completata: **M1.1.6 — Connessione SQLite esplicita e non sovrascrivibile**.
+Milestone completata: **M1.7.3 — Correzione mapping PlayScreen terminale**.
 
-Il catalogo iniziale contiene 44 coppie regolari e una porta finale obbligatoria. Le prime 19 domande di un round saranno copiate dal catalogo; la ventesima sarà sempre `Porta rossa / Porta blu`.
+M1.7.3 corregge il mapping del DTO `PlayScreen` nel ramo terminale: gli argomenti sono ora nominati, così `verificationCode` non può slittare accidentalmente nella posizione di `availableAt`. La costruzione del DTO usa argomenti nominati anche nel ramo di gioco attivo per prevenire regressioni future quando il costruttore evolve.
+
+Il sistema può ora:
+
+- aprire un round verificabile con una strada segreta globale e commitment pubblico;
+- eseguire giocate da venti scelte con timer server-side e token monouso;
+- assegnare atomicamente la vittoria al primo percorso corretto validato;
+- congelare il montepremio, interrompere le altre giocate e creare crediti di ripartenza;
+- aprire automaticamente il round successivo da 10.000,00 € virtuali;
+- pubblicare percorso vincente e nonce soltanto dopo il settlement;
+- ricalcolare pubblicamente il commitment SHA-256 del round;
+- emettere una ricevuta immutabile `V-...` per ogni giocata terminale;
+- verificare ricevuta, percorso, esito e round dalla pagina pubblica `/verifica/{codice}`;
+- consultare lo storico pubblico dei round e lo stato della verifica;
+- mantenere ledger, ricevute e audit protetti da invarianti SQLite append-only;
+- eseguire simulazioni statistiche isolate e riproducibili senza modificare il gioco reale;
+- confrontare profili A/B uniformi e sintetici con bias configurabile;
+- misurare copertura, duplicati, entropia empirica e percorsi più frequenti;
+- consultare una dashboard amministrativa con metriche reali aggregate;
+- esportare in CSV i risultati delle simulazioni;
+- limitare server-side burst e replay sugli endpoint sensibili;
+- restringere `/admin/*` alla loopback per default;
+- applicare CSP e security header a tutte le risposte;
+- generare un `X-Request-Id` server-side per ogni richiesta;
+- scrivere eventi di sicurezza JSONL con redazione dei segreti;
+- applicare hardening SQLite runtime con foreign key, busy timeout, WAL e synchronous FULL;
+- distinguere liveness `/health` e readiness `/ready`;
+- eseguire diagnostica da `/admin/diagnostica` o `app:system:check`;
+- verificare integralmente la catena hash dell’audit.
 
 ## Requisiti
 
 - PHP 8.3 o 8.4
 - Composer
 - Estensioni PHP: `ctype`, `iconv`, `pdo`, `pdo_sqlite`
+- almeno uno tra:
+  - Sodium con `sodium_crypto_secretbox`;
+  - OpenSSL con `AES-256-GCM`
 
 Symfony 7.4 LTS richiede PHP 8.2 o superiore; il progetto impone PHP 8.3 come propria baseline.
 
@@ -32,10 +63,11 @@ php -S 127.0.0.1:8000 -t public
 php -S 127.0.0.1:8000 -t public
 ```
 
+Il bootstrap genera automaticamente un `APP_SECRET` casuale in `.env.local` se non è già presente. Il file è escluso da Git e non viene distribuito nello ZIP. L’area amministrativa è limitata per default a `127.0.0.1` e `::1` tramite `ADMIN_ALLOWED_IPS`.
 
 ## Errore `could not find driver`
 
-Doctrine usa esplicitamente il driver `pdo_sqlite`: `var/data.db` per lo sviluppo e `var/test.db` per i test. La connessione non dipende più da `DATABASE_URL`, quindi file `.env.local` residui o variabili Windows non possono cambiare accidentalmente il motore del database. Prima di Composer e delle migrazioni, `bootstrap.ps1` verifica comunque che `PDO::getAvailableDrivers()` contenga `sqlite`.
+Doctrine usa esplicitamente il driver `pdo_sqlite`: `var/data.db` per lo sviluppo e `var/test.db` per i test. La connessione non dipende da `DATABASE_URL`.
 
 Per controllare manualmente su Windows:
 
@@ -53,11 +85,7 @@ extension=pdo_sqlite
 extension=sqlite3
 ```
 
-Se una riga inizia con `;`, rimuovere il punto e virgola. Dopo la modifica chiudere e riaprire il terminale. Composer può essere configurato con un eseguibile PHP diverso da quello risolto dal comando `php`; per questo il controllo viene eseguito sul runtime che lancerà Symfony e Doctrine.
-
 ## Verifica rapida senza Composer
-
-Il nucleo di dominio non dipende dal framework:
 
 ```bash
 php tools/domain-tests.php
@@ -65,18 +93,85 @@ php tools/domain-tests.php
 
 ## Endpoint
 
-- `/` — pagina del prototipo
-- `/health` — verifica JSON dell'applicazione
+- `/` — home del simulatore
+- `/health` — liveness JSON minimale dell'applicazione
+- `/ready` — readiness JSON con controllo accesso allo schema SQLite
+- `/round/{codice}` — commitment e materiale di verifica del round
+- `/storico` — storico pubblico dei round verificabili
+- `/verifica/{codice}` — ricevuta verificabile della singola giocata
+- `POST /gioca/inizia` — avvio o ripresa della giocata corrente
+- `/gioca/{codice}` — step corrente, protetto dalla sessione anonima
+- `POST /gioca/{codice}/scelta` — invio server-side della scelta
+- `/admin/round` — apertura e storico dei round
+- `/admin/simulazioni` — dashboard, nuova simulazione e storico dei run statistici
+- `/admin/simulazioni/{codice}` — dettaglio di una simulazione
+- `/admin/simulazioni/{codice}/csv` — esportazione CSV aggregata
+- `/admin/diagnostica` — controlli SQLite, spazio operativo e integrità audit
 - `/admin/scelte` — catalogo amministrativo delle coppie
 - `/admin/scelte/nuova` — creazione di una coppia regolare
 
-## Regole M1.1
+## Apertura del round
 
-- Le coppie regolari possono essere create, modificate, attivate, disattivate ed eliminate.
-- La porta finale può essere rinominata, ma non disattivata o eliminata.
-- Un round richiede esattamente 19 coppie regolari attive più la porta finale.
-- I dati delle domande vengono copiati in snapshot immutabili.
-- L'hash SHA-256 dello snapshot entra nel commitment del round.
+L'operazione è atomica. Nella stessa transazione vengono creati:
+
+1. record `game_round` in stato `PREPARING`;
+2. 20 snapshot delle domande;
+3. movimento `BANK_SEED` da 1.000.000 centesimi virtuali;
+4. passaggio del round a `ACTIVE`.
+
+Se uno dei passaggi fallisce, l'intera apertura viene annullata.
+
+Il percorso e il nonce sono cifrati con autenticazione. Il ciphertext è legato all'identificativo interno e al tipo di segreto, quindi non può essere spostato su un altro round o scambiato tra percorso e nonce.
+
+## Verifica del commitment
+
+Il commitment usa il payload canonico:
+
+```text
+twenty-choices-v1:<round-code>:<question-set-hash>:<20-bits>:<nonce-hex>
+```
+
+Durante il round vengono pubblicati soltanto:
+
+- codice del round;
+- hash del set di domande;
+- commitment SHA-256;
+- data di apertura;
+- montepremio virtuale.
+
+Percorso e nonce restano cifrati durante il round. Nel passaggio atomico a `SETTLED` vengono pubblicati in colonne dedicate e rese immutabili; chiunque può quindi ricalcolare il commitment.
+
+
+## Flusso della giocata
+
+Una partecipazione standard registra virtualmente 1,00 € come 0,80 € al montepremio e 0,20 € all'organizzazione. Ogni scelta usa un token monouso e un timer server-side immutabile.
+
+Alla ventesima scelta la stessa transazione:
+
+1. registra la risposta finale;
+2. ricostruisce il percorso completo;
+3. decifra e verifica il percorso segreto contro il commitment;
+4. marca la giocata come `COMPLETED_LOST`, oppure tenta atomicamente `ACTIVE → WON`;
+5. se vince, congela il jackpot, registra il payout virtuale, interrompe le altre giocate e crea i crediti;
+6. apre il round successivo da 10.000,00 €;
+7. pubblica percorso vincente e nonce e chiude il vecchio round come `SETTLED`;
+8. emette le ricevute verificabili delle giocate terminali nella stessa unità di lavoro;
+9. esegue il commit di tutto il blocco.
+
+Se qualunque passaggio fallisce, l'intera chiusura viene annullata.
+
+Una giocata interrotta passa a `CREDITED`. Alla successiva partecipazione il credito viene consumato automaticamente come `RESTART_CREDIT`: il nuovo round non riceve un secondo contributo da 0,80 € e l'organizzazione non riceve un secondo 0,20 €.
+
+## Test
+
+Il bootstrap ricrea `var/test.db`, applica tutte le migrazioni ed esegue:
+
+```bash
+php tools/domain-tests.php
+php bin/phpunit
+```
+
+La suite M1.7 contiene **67 metodi PHPUnit**, pari a **69 casi effettivi** considerando il data provider di `WinningPathTest`. Il runner indipendente contiene **18 verifiche**.
 
 ## Documentazione
 
@@ -85,33 +180,43 @@ php tools/domain-tests.php
 - `docs/03-roadmap.md`
 - `docs/04-validation.md`
 - `docs/05-choice-catalog.md`
+- `docs/06-round-opening.md`
+- `docs/07-play-flow.md`
+- `docs/08-round-settlement.md`
+- `docs/09-public-verification.md`
+- `docs/10-simulation-statistics.md`
+- `docs/11-security-robustness.md`
+- `docs/12-operations-runbook.md`
 
-## Compatibilità dei test
 
-La suite rimane compatibile con PHPUnit 9.6, utilizzato da Symfony PHPUnit Bridge nell'ambiente iniziale del progetto. I data provider usano l'annotazione `@dataProvider`; la configurazione XML usa `cacheResultFile` e dichiara esplicitamente `KERNEL_CLASS=App\Kernel`.
+## Simulazioni statistiche
 
-La configurazione Doctrine non usa `use_savepoints`, opzione non esposta da DoctrineBundle 3.x. Lo script `bin/phpunit` dichiara inoltre il comando Composer prima di avviare il bridge, evitando il warning `preg_replace(... null ...)` osservato su Windows con PHP 8.x.
+Le simulazioni M1.6 sono completamente isolate da round e giocate reali. Non leggono la strada segreta, non creano movimenti contabili e non modificano il jackpot.
 
-Gli script di bootstrap interrompono immediatamente l'esecuzione se un comando fallisce e ricreano il database di test prima della suite di persistenza. In PowerShell il messaggio d'errore usa l'operatore di formato `-f`, evitando l'ambiguità sintattica di una variabile seguita da `:`.
+Dal browser si possono eseguire fino a 250.000 giocate per run. Per elaborazioni più grandi:
 
+```bash
+php bin/console app:simulation:run --plays=1000000 --profile=UNIFORM --seed=20260718
+```
 
-### Correzione M1.1.3
+Profili disponibili: `UNIFORM`, `FIXED_A_BIAS`, `ALTERNATING_BIAS`. I profili con bias sono modelli sintetici, non dati empirici sul comportamento umano.
 
-Compatibilità con DoctrineBundle 3 / ORM 3: rimossa la configurazione legacy dei proxy e reso esplicito il controllo `cache:clear` nel bootstrap.
+Dettagli: `docs/10-simulation-statistics.md`.
 
-### Correzione M1.1.4
+## Sicurezza e diagnostica
 
-Il bootstrap controlla il driver PDO SQLite prima di installare dipendenze o modificare database e, in caso di errore, mostra il percorso dell’eseguibile PHP e del `php.ini` effettivamente caricati.
+M1.7 introduce rate limiting SQLite-backed con chiavi HMAC, security header HTTP, request ID, log strutturato redatto e accesso amministrativo locale per default. Il JavaScript della giocata è servito da `public/play.js`, quindi la CSP non richiede `unsafe-inline` per gli script.
 
-### Aggiornamento M1.1.5
+Controllo operativo:
 
-- definita `DEFAULT_URI=http://localhost` negli ambienti di sviluppo e test;
-- il bootstrap imposta la stessa variabile nel processo prima di avviare Symfony;
-- la configurazione resta compatibile anche quando nella cartella locale è presente un vecchio file che usa `%env(DEFAULT_URI)%`.
+```bash
+php bin/console app:system:check
+```
 
-### Correzione M1.1.6
+Configurazione admin predefinita:
 
-- rimossa la dipendenza da `DATABASE_URL`;
-- configurato direttamente `driver: pdo_sqlite`;
-- configurato `var/data.db` per `dev` e `var/test.db` per `test`;
-- neutralizzate eventuali variabili d'ambiente o file `.env.local` residui relativi al database.
+```dotenv
+ADMIN_ALLOWED_IPS=127.0.0.1,::1
+```
+
+Dettagli: `docs/11-security-robustness.md` e `docs/12-operations-runbook.md`.

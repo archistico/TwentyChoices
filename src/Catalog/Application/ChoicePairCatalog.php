@@ -78,6 +78,7 @@ final readonly class ChoicePairCatalog
     {
         $pair = $this->get($id);
         if ($pair->isActive()) {
+            $this->assertCanRemoveActiveRegular($pair);
             $pair->deactivate();
         } else {
             $pair->activate();
@@ -91,7 +92,24 @@ final readonly class ChoicePairCatalog
     public function delete(string $id): void
     {
         $pair = $this->get($id);
+        if ($pair->isActive()) {
+            $this->assertCanRemoveActiveRegular($pair);
+        }
         $this->repository->remove($pair);
+    }
+
+
+    private function assertCanRemoveActiveRegular(ChoicePair $pair): void
+    {
+        if ($pair->isSystem()) {
+            return;
+        }
+
+        if (count($this->repository->findAllActiveRegular()) <= 19) {
+            throw new DomainRuleViolation(
+                'Devono rimanere almeno 19 coppie regolari attive per garantire il reset automatico del round.',
+            );
+        }
     }
 
     private function assertCodeAvailable(string $code): void

@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Diagnostica — TwentyChoices{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Sicurezza e robustezza</div>
+        <h1>Diagnostica</h1>
+        <p>Controlli read-only su SQLite, durabilità, spazio operativo e integrità della catena audit.</p>
+    </div>
+    <span class="badge {% if report.status == 'ok' %}badge-success{% elseif report.status == 'warning' %}badge-system{% else %}badge-error{% endif %}">
+        {{ report.status|upper }}
+    </span>
+</div>
+
+<div class="table-wrap">
+    <table>
+        <thead>
+        <tr>
+            <th>Stato</th>
+            <th>Controllo</th>
+            <th>Valore</th>
+            <th>Dettaglio</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for check in report.checks %}
+            <tr>
+                <td><span class="badge {% if check.status == 'ok' %}badge-success{% elseif check.status == 'warning' %}badge-system{% else %}badge-error{% endif %}">{{ check.status|upper }}</span></td>
+                <td><strong>{{ check.name }}</strong></td>
+                <td><code>{{ check.value }}</code></td>
+                <td>{{ check.detail }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="notice">
+    Da CLI lo stesso controllo è disponibile con <code>php bin/console app:system:check</code>.
+</div>
+{% endblock %}

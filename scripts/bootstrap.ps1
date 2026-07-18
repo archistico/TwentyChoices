@@ -104,6 +104,8 @@ if (-not (Get-Command composer -ErrorAction SilentlyContinue)) {
 
 Assert-SqlitePdoDriver
 
+Invoke-Checked "php" @("-r", "exit(function_exists('sodium_crypto_secretbox') || (function_exists('openssl_encrypt') && in_array('aes-256-gcm', openssl_get_cipher_methods(), true)) ? 0 : 1);")
+
 # Verifica anche che PDO riesca ad aprire realmente una connessione SQLite.
 Invoke-Checked "php" @("-r", "`$pdo = new PDO('sqlite::memory:'); echo 'PDO SQLite operativo.' . PHP_EOL;")
 
@@ -113,9 +115,11 @@ if ([string]::IsNullOrWhiteSpace($env:DEFAULT_URI)) {
     $env:DEFAULT_URI = "http://localhost"
 }
 
+Invoke-Checked "php" @("tools/ensure-local-secret.php")
 Invoke-Checked "composer" @("install", "--no-interaction", "--no-scripts")
 Invoke-Checked "php" @("bin/console", "cache:clear")
 Invoke-Checked "php" @("bin/console", "doctrine:migrations:migrate", "--no-interaction")
+Invoke-Checked "php" @("bin/console", "app:system:check")
 
 # Il database di test deve essere sempre ricreato per rendere deterministici seed e test di persistenza.
 Reset-TestSqliteDatabase

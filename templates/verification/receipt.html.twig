@@ -1,0 +1,69 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Verifica {{ receipt.verificationCode }} — TwentyChoices{% endblock %}
+
+{% block body %}
+<section class="panel round-public">
+    <div class="eyebrow">Ricevuta pubblica verificabile</div>
+    <h1 style="font-size: clamp(2rem, 5vw, 3.8rem)">{{ receipt.verificationCode }}</h1>
+
+    <div class="summary">
+        <div class="summary-item">
+            <span class="summary-value">{{ receipt.outcome }}</span>
+            <span class="summary-label">Esito registrato</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-value">{{ receipt.completedSteps }}/20</span>
+            <span class="summary-label">Scelte registrate</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-value">{{ receipt.receiptIntegrityValid ? 'VALIDA' : 'ERRORE' }}</span>
+            <span class="summary-label">Integrità ricevuta</span>
+        </div>
+    </div>
+
+    <dl class="metadata-grid">
+        <div><dt>Giocata</dt><dd><code>{{ receipt.playPublicCode }}</code></dd></div>
+        <div><dt>Round</dt><dd><a href="{{ path('app_round_show', {publicCode: receipt.roundPublicCode}) }}"><code>{{ receipt.roundPublicCode }}</code></a></dd></div>
+        <div><dt>Partecipazione</dt><dd>n. {{ receipt.participationNumber|number_format(0, ',', '.') }}</dd></div>
+        <div><dt>Tipo ingresso</dt><dd>{{ receipt.entryKind }}</dd></div>
+        <div><dt>Emessa il</dt><dd>{{ receipt.issuedAt|date('d/m/Y H:i:s') }} UTC</dd></div>
+        <div><dt>Percorso registrato</dt><dd><code>{{ receipt.chosenPathBits ?: '—' }}</code></dd></div>
+        <div><dt>Hash SHA-256 ricevuta</dt><dd><code class="hash">{{ receipt.receiptHash }}</code></dd></div>
+    </dl>
+
+    {% if receipt.roundVerificationAvailable %}
+        <h2 style="margin-top: 34px">Verifica crittografica del round</h2>
+        <div class="summary" style="margin-top: 18px">
+            <div class="summary-item">
+                <span class="summary-value">{{ receipt.roundCommitmentValid ? 'VALIDO' : 'ERRORE' }}</span>
+                <span class="summary-label">Commitment</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-value">{{ receipt.outcomeConsistent ? 'COERENTE' : 'ERRORE' }}</span>
+                <span class="summary-label">Esito vs percorso</span>
+            </div>
+            {% if receipt.frozenJackpotFormatted %}
+                <div class="summary-item">
+                    <span class="summary-value">{{ receipt.frozenJackpotFormatted }}</span>
+                    <span class="summary-label">Montepremio congelato</span>
+                </div>
+            {% endif %}
+        </div>
+        <dl class="metadata-grid">
+            <div><dt>Commitment originario</dt><dd><code class="hash">{{ receipt.commitment }}</code></dd></div>
+            <div><dt>Hash set domande</dt><dd><code class="hash">{{ receipt.questionSetHash }}</code></dd></div>
+            <div><dt>Percorso vincente pubblicato</dt><dd><code>{{ receipt.winningPath }}</code></dd></div>
+            <div><dt>Nonce pubblicato</dt><dd><code class="hash">{{ receipt.nonceHex }}</code></dd></div>
+            <div><dt>Giocata vincente</dt><dd><code>{{ receipt.winnerPlayPublicCode ?: '—' }}</code></dd></div>
+        </dl>
+        {% if receipt.receiptIntegrityValid and receipt.roundCommitmentValid and receipt.outcomeConsistent %}
+            <div class="notice verification-ok">La ricevuta è integra e i dati pubblicati del round ricostruiscono correttamente il commitment originario.</div>
+        {% else %}
+            <div class="notice verification-error">La verifica ha rilevato un'incoerenza. I dati non devono essere considerati validi.</div>
+        {% endif %}
+    {% else %}
+        <div class="notice">La ricevuta è già immutabile, ma il round è ancora {{ receipt.roundStatus }}. Percorso vincente e nonce saranno pubblicati soltanto dopo il settlement.</div>
+    {% endif %}
+</section>
+{% endblock %}

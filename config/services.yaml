@@ -4,6 +4,11 @@ services:
     _defaults:
         autowire: true
         autoconfigure: true
+        bind:
+            $applicationSecret: '%env(APP_SECRET)%'
+            $projectDir: '%kernel.project_dir%'
+            $kernelEnvironment: '%kernel.environment%'
+            $adminAllowedIps: '%env(ADMIN_ALLOWED_IPS)%'
 
     App\:
         resource: '../src/'
@@ -11,9 +16,25 @@ services:
             - '../src/Kernel.php'
             - '../src/Game/Domain/'
             - '../src/Catalog/Domain/'
+            - '../src/Simulation/Domain/'
 
     App\Catalog\Domain\Repository\ChoicePairRepository:
         alias: App\Catalog\Infrastructure\Persistence\DoctrineDbalChoicePairRepository
 
     App\Catalog\Domain\Repository\QuestionSetSnapshotStore:
         alias: App\Catalog\Infrastructure\Persistence\DoctrineDbalQuestionSetSnapshotStore
+
+    App\Catalog\Domain\Service\QuestionSetFactory: ~
+    App\Catalog\Domain\Service\CryptographicChoicePairSelector: ~
+
+    App\Game\Domain\Security\RoundSecretCipher:
+        alias: App\Game\Infrastructure\Security\AuthenticatedRoundSecretCipher
+
+    App\Shared\Time\SystemClock:
+        public: true
+
+    App\Shared\Time\Clock:
+        alias: App\Shared\Time\SystemClock
+        public: true
+
+    App\Simulation\Domain\SimulationEngine: ~

@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Scelta {{ play.displayedStep }}/20 — TwentyChoices{% endblock %}
+
+{% block body %}
+<section class="play-shell">
+    <div class="play-topline">
+        <div>
+            <div class="eyebrow">Round {{ play.roundPublicCode }}</div>
+            <h1 class="play-title">Scelta {{ play.displayedStep }}/20</h1>
+        </div>
+        <div class="play-jackpot">
+            <span>Montepremio virtuale</span>
+            <strong>{{ play.jackpotFormatted }}</strong>
+        </div>
+    </div>
+
+    <div class="play-meta">
+        <span>Giocata <strong>{{ play.playPublicCode }}</strong></span>
+        <span>Partecipazione n. <strong>{{ play.participationNumber|number_format(0, ',', '.') }}</strong></span>
+        <span>{{ play.category }}</span>
+    </div>
+
+    <form
+        method="post"
+        action="{{ path('app_play_choice', {playPublicCode: play.playPublicCode}) }}"
+        class="choice-form"
+        data-choice-form
+        data-shown-at="{{ play.shownAtEpochMilliseconds }}"
+        data-available-at="{{ play.availableAtEpochMilliseconds }}"
+    >
+        <input type="hidden" name="_token" value="{{ csrf_token('play_choice_' ~ play.playPublicCode) }}">
+        <input type="hidden" name="challengeToken" value="{{ play.challengeToken }}">
+        <input type="hidden" name="requestId" value="{{ play.requestId }}">
+        <input type="hidden" name="clientElapsedMilliseconds" value="" data-client-elapsed>
+        <input type="hidden" name="selectedOptionJs" value="" data-selected-option>
+
+        <div class="choice-grid" aria-describedby="choice-status">
+            <button class="choice-card{% if play.displayedStep == 20 %} choice-door{% if 'rossa' in play.leftLabel|lower %} choice-door-red{% else %} choice-door-blue{% endif %}{% endif %}" type="submit" name="selectedOption" value="{{ play.leftValue }}">
+                <span class="choice-label">{{ play.leftLabel }}</span>
+            </button>
+            <button class="choice-card{% if play.displayedStep == 20 %} choice-door{% if 'rossa' in play.rightLabel|lower %} choice-door-red{% else %} choice-door-blue{% endif %}{% endif %}" type="submit" name="selectedOption" value="{{ play.rightValue }}">
+                <span class="choice-label">{{ play.rightLabel }}</span>
+            </button>
+        </div>
+
+        <div id="choice-status" class="choice-status" aria-live="polite" data-choice-status>
+            Attendi 2,0 secondi prima di scegliere.
+        </div>
+        <noscript>
+            <div class="notice">JavaScript serve soltanto per il conto alla rovescia visivo. Il controllo dei due secondi viene comunque eseguito dal server.</div>
+        </noscript>
+    </form>
+
+    <div class="play-progress" aria-label="Avanzamento giocata">
+        <div class="play-progress-bar" style="width: {{ (play.displayedStep / 20 * 100)|round(2) }}%"></div>
+    </div>
+    <p class="play-security-note">Il timer, lo step corrente e la validità della scelta sono controllati dal server. Ricaricare la pagina non azzera l’attesa.</p>
+</section>
+
+<script src="{{ asset('play.js') }}" defer></script>
+{% endblock %}

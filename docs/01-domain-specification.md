@@ -23,10 +23,15 @@ TwentyChoices è un simulatore tecnico gratuito. Tutti gli importi, le quote, i 
 
 - Un solo round può essere `ACTIVE`.
 - Un round `ACTIVE` non può cambiare strada, nonce, set di domande o commitment.
+- Percorso e nonce sono persistiti esclusivamente in forma cifrata e autenticata.
+- Il commitment viene pubblicato prima dell’attivazione e resta immutabile.
 - Un round può avere al massimo un vincitore.
 - Un round può passare a `WON` soltanto da `ACTIVE`.
 - Il payout congelato non può essere modificato dopo la vincita.
-- Strada e nonce possono essere pubblicati soltanto dopo la vincita.
+- Strada e nonce possono essere pubblicati soltanto quando il round diventa `SETTLED`.
+- Un nuovo round non può diventare `SETTLED` senza pubblicare atomicamente percorso, nonce e timestamp di pubblicazione.
+- Il materiale pubblico di verifica è immutabile dopo la prima pubblicazione.
+- Il materiale pubblicato deve ricostruire esattamente il commitment originario.
 
 ## Invarianti della giocata
 
@@ -38,6 +43,9 @@ TwentyChoices è un simulatore tecnico gratuito. Tutti gli importi, le quote, i 
 - Un challenge token può essere utilizzato una sola volta.
 - Una scelta accettata è soltanto `A` o `B`.
 - Una giocata interrotta genera al massimo un credito.
+- Ogni giocata terminale può avere una sola ricevuta pubblica di verifica.
+- La ricevuta fotografa codice giocata, round, numero partecipazione, esito, step e percorso registrato.
+- Una ricevuta emessa non può essere aggiornata né eliminata.
 
 ## Invarianti del catalogo
 
@@ -54,3 +62,28 @@ TwentyChoices è un simulatore tecnico gratuito. Tutti gli importi, le quote, i 
 - Il ledger è append-only.
 - Una stessa correlazione non può produrre due movimenti dello stesso tipo.
 - Le correzioni sono movimenti compensativi; i movimenti esistenti non vengono aggiornati o cancellati.
+
+
+## Invarianti della simulazione statistica
+
+- Una simulazione non è una giocata e non partecipa a un round reale.
+- Una simulazione non può modificare `game_round`, `play`, `play_step`, `ledger_entry`, `play_credit`, `play_receipt` o `audit_event`.
+- Una simulazione non legge né decifra il percorso vincente di un round attivo.
+- Il seed rende il campione riproducibile a parità di algoritmo, profilo e parametri.
+- I profili con bias sono sintetici e non rappresentano probabilità umane misurate.
+- Le statistiche persistite sono aggregati immutabili.
+- La copertura è sempre riferita allo spazio completo di 1.048.576 percorsi.
+- L'esportazione CSV non contiene identificativi di sessione o dati personali.
+
+## Invarianti di sicurezza operativa
+
+- Il client non può rendere autorevoli IP, step, timer, token, stato round o correlation/request ID.
+- Le chiavi del rate limiter sono HMAC e non persistono IP o cookie in chiaro.
+- Un endpoint limitato restituisce `429` con `Retry-After` senza eseguire il caso d’uso applicativo.
+- L’area amministrativa è default-deny fuori dagli IP esplicitamente consentiti.
+- I security log non devono contenere token, nonce, cookie, authorization header o percorsi segreti.
+- Ogni richiesta HTTP principale riceve un request ID generato dal server.
+- La catena audit deve essere contigua e ogni `event_hash` deve essere ricalcolabile dai campi persistiti.
+- Un errore durante il settlement vincente deve annullare anche la ventesima scelta e ogni side effect successivo.
+- Una richiesta stale successiva a una vittoria non può cambiare vincitore, payout o stato del round.
+- `/health` non dipende dal database; `/ready` deve fallire se lo schema applicativo non è interrogabile.

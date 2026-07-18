@@ -1,0 +1,86 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ run.publicCode }} — Simulazione TwentyChoices{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Simulazione statistica isolata</div>
+        <h1>{{ run.publicCode }}</h1>
+        <p>Seed <code>{{ run.seed }}</code> · profilo <strong>{{ run.profile }}</strong> · completata {{ run.completedAt|date('d/m/Y H:i:s') }} UTC.</p>
+    </div>
+    <div class="button-row">
+        <a class="button" href="{{ path('admin_simulation_csv', {publicCode: run.publicCode}) }}">Esporta CSV</a>
+        <a class="button" href="{{ path('admin_simulation_index') }}">Torna alle simulazioni</a>
+    </div>
+</div>
+
+<div class="summary">
+    <div class="summary-item"><span class="summary-value">{{ run.plays|number_format(0, ',', '.') }}</span><span class="summary-label">Giocate simulate</span></div>
+    <div class="summary-item"><span class="summary-value">{{ run.uniquePaths|number_format(0, ',', '.') }}</span><span class="summary-label">Percorsi distinti</span></div>
+    <div class="summary-item"><span class="summary-value">{{ run.duplicatePlays|number_format(0, ',', '.') }}</span><span class="summary-label">Giocate duplicate</span></div>
+    <div class="summary-item"><span class="summary-value">{{ run.coveragePercentFormatted }}</span><span class="summary-label">Spazio coperto su 1.048.576</span></div>
+</div>
+
+<section class="panel" style="margin-bottom: 24px">
+    <div class="summary" style="margin: 0">
+        <div class="summary-item"><span class="summary-value">{{ run.duplicatePercentFormatted }}</span><span class="summary-label">Quota duplicati</span></div>
+        <div class="summary-item"><span class="summary-value">{{ run.entropyFormatted }}</span><span class="summary-label">Entropia empirica</span></div>
+        <div class="summary-item"><span class="summary-value">{{ run.effectivePathCount|number_format(0, ',', '.') }}</span><span class="summary-label">Percorsi effettivi osservati</span></div>
+        <div class="summary-item"><span class="summary-value">{{ run.maxPathHits|number_format(0, ',', '.') }}</span><span class="summary-label">Massima frequenza singolo percorso</span></div>
+    </div>
+    <p class="help" style="margin-top: 16px">L'entropia è calcolata sulla distribuzione empirica del campione: per campioni piccoli è naturalmente limitata dal numero di giocate osservate.</p>
+</section>
+
+<section style="margin-bottom: 30px">
+    <h2>Distribuzione A/B per step</h2>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Step</th><th>Probabilità configurata A</th><th>Scelte A</th><th>Scelte B</th><th>Distribuzione osservata</th></tr></thead>
+            <tbody>
+            {% for stat in run.choiceStats %}
+                {% set total = stat.optionACount + stat.optionBCount %}
+                {% set aPercent = total > 0 ? (stat.optionACount / total * 100) : 0 %}
+                <tr>
+                    <td>{{ stat.step }}/20</td>
+                    <td>{{ (stat.probabilityABasisPoints / 100)|number_format(2, ',', '.') }}%</td>
+                    <td>{{ stat.optionACount|number_format(0, ',', '.') }}</td>
+                    <td>{{ stat.optionBCount|number_format(0, ',', '.') }}</td>
+                    <td style="min-width:260px">
+                        <div class="stat-bar" title="A {{ aPercent|number_format(2, ',', '.') }}% / B {{ (100-aPercent)|number_format(2, ',', '.') }}%">
+                            <span class="stat-bar-a" style="width: {{ aPercent }}%"></span>
+                            <span class="stat-bar-b" style="width: {{ 100-aPercent }}%"></span>
+                        </div>
+                        <div class="help">A {{ aPercent|number_format(2, ',', '.') }}% · B {{ (100-aPercent)|number_format(2, ',', '.') }}%</div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section>
+    <h2>Percorsi più frequenti</h2>
+    {% if run.topPaths is empty %}
+        <div class="notice">Nessun percorso è comparso più di una volta in questo campione.</div>
+    {% else %}
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>#</th><th>Percorso</th><th>Valore</th><th>Occorrenze</th><th>Frequenza</th></tr></thead>
+                <tbody>
+                {% for path in run.topPaths %}
+                    <tr>
+                        <td>{{ path.rank }}</td>
+                        <td><code>{{ path.pathBits }}</code></td>
+                        <td>{{ path.pathValue|number_format(0, ',', '.') }}</td>
+                        <td>{{ path.hitCount|number_format(0, ',', '.') }}</td>
+                        <td>{{ (path.hitCount / run.plays * 100)|number_format(5, ',', '.') }}%</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

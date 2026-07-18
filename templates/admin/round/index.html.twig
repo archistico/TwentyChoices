@@ -1,0 +1,89 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gestione round — TwentyChoices{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <div class="eyebrow">Amministrazione</div>
+        <h1>Round</h1>
+        <p>L'apertura crea atomicamente il set di venti domande, il percorso segreto cifrato, il commitment pubblico e il seed virtuale.</p>
+    </div>
+    {% if activeRound is null %}
+        <form method="post" action="{{ path('admin_round_open') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('round_open') }}">
+            <button class="button button-primary" type="submit">Apri nuovo round</button>
+        </form>
+    {% else %}
+        <button class="button" type="button" disabled>Round già attivo</button>
+    {% endif %}
+</div>
+
+{% if activeRound %}
+    <section class="panel" style="margin-bottom: 24px">
+        <div class="eyebrow">Round attivo</div>
+        <h2 style="margin-top: 8px"><a href="{{ path('app_round_show', {publicCode: activeRound.publicCode}) }}">{{ activeRound.publicCode }}</a></h2>
+        <div class="summary" style="margin-top: 24px; margin-bottom: 0">
+            <div class="summary-item">
+                <span class="summary-value">{{ activeRound.currentJackpotFormatted }}</span>
+                <span class="summary-label">Montepremio virtuale</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-value">{{ activeRound.questionCount }}/20</span>
+                <span class="summary-label">Snapshot domande</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-value">{{ activeRound.status }}</span>
+                <span class="summary-label">Stato</span>
+            </div>
+        </div>
+        <dl class="metadata-grid">
+            <div><dt>Avviato</dt><dd>{{ activeRound.startedAt|date('d/m/Y H:i:s') }} UTC</dd></div>
+            <div><dt>Commitment pubblico</dt><dd><code class="hash">{{ activeRound.commitment }}</code></dd></div>
+            <div><dt>Hash domande</dt><dd><code class="hash">{{ activeRound.questionSetHash }}</code></dd></div>
+        </dl>
+    </section>
+{% else %}
+    <div class="notice">Non esiste ancora un round attivo. Il catalogo deve contenere almeno 19 coppie regolari attive e la porta finale.</div>
+{% endif %}
+
+<section>
+    <h2 style="margin-bottom: 14px">Storico recente</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+            <tr>
+                <th>Round</th>
+                <th>Stato</th>
+                <th>Inizio</th>
+                <th>Domande</th>
+                <th>Montepremio</th>
+                <th>Verifica pubblica</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for round in recentRounds %}
+                <tr>
+                    <td><a href="{{ path('app_round_show', {publicCode: round.publicCode}) }}"><code>{{ round.publicCode }}</code></a></td>
+                    <td><span class="badge {{ round.status == 'ACTIVE' ? 'badge-success' : 'badge-muted' }}">{{ round.status }}</span></td>
+                    <td>{{ round.startedAt ? round.startedAt|date('d/m/Y H:i:s') : '—' }}</td>
+                    <td>{{ round.questionCount }}/20</td>
+                    <td>{{ round.currentJackpotFormatted }}</td>
+                    <td>
+                        {% if round.verificationPublished %}
+                            <span class="badge badge-success">PUBBLICATA</span>
+                        {% elseif round.status == 'SETTLED' %}
+                            <span class="badge badge-muted">LEGACY / DA PUBBLICARE</span>
+                        {% else %}
+                            <span class="badge badge-muted">IN ATTESA</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6">Nessun round creato.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

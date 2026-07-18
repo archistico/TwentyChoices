@@ -80,3 +80,142 @@ Lo script:
 - Il database di test è `var/test.db`.
 - `DATABASE_URL` è stato rimosso da `.env` e `.env.test`.
 - Variabili di sistema o file locali residui non possono più selezionare per errore un driver PostgreSQL, MySQL o altro.
+
+## M1.1.7 — Baseline validata dall'utente
+
+- Bootstrap PowerShell eseguito con successo mediante `-ExecutionPolicy Bypass`.
+- 8 test di dominio, 0 errori.
+- 25 test PHPUnit, 47 assertion, tutti superati.
+- Reset SQLite test eseguito direttamente su `var/test.db`.
+- Rilevamento Composer compatibile con installazione Scoop.
+
+## M1.2 — Verifiche del pacchetto
+
+- Tutti i file PHP superano `php -l` con PHP 8.4.
+- `tools/domain-tests.php`: 10 test, 0 errori.
+- Configurazioni YAML, JSON e XML valide.
+- `scripts/bootstrap.sh` supera il controllo sintattico della shell.
+- Le tre migrazioni sono state applicate in sequenza a SQLite in memoria.
+- Schema risultante: 9 tabelle, 22 indici espliciti e 11 trigger.
+- Seed catalogo: 44 coppie regolari e una porta finale.
+- Simulata con successo l'apertura completa di un round con 20 snapshot e un `BANK_SEED`.
+- Verificato che SQLite rifiuti la modifica del ledger.
+- Verificato che SQLite rifiuti la modifica del commitment e dei segreti cifrati.
+- Verificato il vincolo del singolo round attivo.
+- Cifratura: round-trip, binding al contesto e rilevazione di manomissione verificati dal runner indipendente.
+- Rimosso il segreto committato da `.env.dev`, che avrebbe avuto priorità sul valore generato in `.env.local`.
+- Suite PHPUnit M1.2 predisposta: 36 casi effettivi. L'utente ha confermato il superamento completo della suite.
+
+
+## M1.3 — Verifiche del pacchetto
+
+- Tutti i file PHP superano `php -l` con PHP 8.4.
+- `tools/domain-tests.php`: 12 test, 0 errori.
+- Le quattro migrazioni sono state applicate in sequenza a SQLite in memoria.
+- Schema risultante: 9 tabelle, 25 indici espliciti e 27 trigger.
+- Smoke test SQLite completato con round, sessione, giocata, ledger, step e audit.
+- Verificato che una risposta a 1,999 secondi venga rifiutata e quella a 2,000 secondi venga accettata.
+- Verificato l'incremento del montepremio di 80 centesimi per una partecipazione standard.
+- Verificata l'immutabilità strutturale dello step e l'avanzamento di un solo bit per transazione.
+- Verificata la rotazione del token al refresh senza modifica di `shown_at` e `available_at`.
+- Suite PHPUnit predisposta: 45 casi effettivi.
+
+## M1.4 — Verifiche del pacchetto
+
+- Tutti i file PHP superano `php -l` con PHP 8.4.
+- `tools/domain-tests.php`: 12 test, 0 errori.
+- Le cinque migrazioni sono state applicate in sequenza a SQLite in memoria.
+- Schema risultante: 9 tabelle, 30 indici espliciti e 43 trigger.
+- Verificata la protezione dei campi vincitore prima della transizione `ACTIVE → WON`.
+- Eseguito uno scenario SQL completo: vincita, congelamento jackpot, payout, interruzione, emissione credito, settlement e riscatto credito.
+- Il vecchio round termina `SETTLED` con un solo vincitore e un solo `JACKPOT_PAYOUT`.
+- Una giocata aperta al momento della vincita termina `CREDITED` con un solo credito `AVAILABLE`.
+- Il credito passa una sola volta a `REDEEMED` ed è associato a una nuova giocata `RESTART_CREDIT`.
+- Il nuovo round parte da 1.000.000 centesimi virtuali e il riscatto del credito non incrementa `entry_contribution_cents`.
+- La suite PHPUnit M1.4 aggiunge test end-to-end per percorso perdente, vincita/reset e riscatto credito; 49 casi effettivi.
+- L’utente ha confermato il superamento completo della suite M1.4.
+
+
+## M1.5 — Verificabilità pubblica
+
+- Pubblicazione del percorso vincente e del nonce integrata nella transazione `WON → SETTLED`.
+- Il commitment viene ricalcolato da soli dati pubblici tramite `RoundVerifier`.
+- Compatibilità prevista per round M1.4 già conclusi: pubblicazione lazy soltanto dopo verifica crittografica riuscita.
+- Introdotta `play_receipt`, una ricevuta immutabile e univoca per ogni giocata terminale.
+- Hash ricevuta canonico legato a codice, round, partecipazione, esito, step, percorso e timestamp.
+- Trigger SQLite impediscono modifica/eliminazione delle ricevute e modifica del materiale di verifica pubblicato.
+- Aggiunti test unitari per ricalcolo commitment e hashing ricevuta.
+- Aggiunti test di integrazione per ricevuta perdente pre-settlement, pubblicazione vincente, ricevute delle giocate interrotte e tentativi di manomissione.
+- `tools/domain-tests.php`: 14 verifiche indipendenti, tutte superate nel pacchetto.
+- 53 metodi di test PHPUnit, pari a **55 casi effettivi** considerando i 3 casi del data provider di `WinningPathTest`.
+- Sei migrazioni eseguite in sequenza tramite harness SQLite: 10 tabelle applicative, 35 indici espliciti e 49 trigger.
+- Smoke test SQLite M1.5: settlement senza reveal rifiutato; settlement con reveal accettato; modifica successiva di reveal e ricevuta rifiutata.
+
+
+## M1.6 — Simulazione, statistiche e amministrazione
+
+- Introdotto un motore di simulazione separato dalle tabelle operative del gioco.
+- Il motore usa un bitset da 128 KiB per la copertura esatta dei 1.048.576 percorsi.
+- Seed e parametri rendono riproducibili i run.
+- Profili sintetici disponibili: uniforme, bias A costante e bias alternato.
+- Persistenza separata in `simulation_run`, `simulation_choice_stat` e `simulation_path_stat`.
+- Trigger SQLite rendono immutabili riepiloghi e statistiche persistite.
+- Dashboard amministrativa con metriche aggregate del gioco reale in sola lettura.
+- Esportazione CSV dei dati aggregati della simulazione.
+- Comando CLI dedicato per simulazioni massive fino a 1.000.000 di giocate per run.
+- Tutti i 94 file PHP sotto `src`, `tests` e `migrations` superano `php -l` con PHP 8.4.
+- `tools/domain-tests.php`: 16 test, 0 errori.
+- Le sette migrazioni sono state applicate in sequenza tramite harness SQLite.
+- Schema risultante: 13 tabelle applicative, 40 indici espliciti e 55 trigger; catalogo invariato a 45 coppie.
+- Smoke test SQLite: inserimento statistiche riuscito e modifica successiva di `simulation_run` respinta dal trigger di immutabilità.
+- Smoke test motore con 100.000 giocate uniformi e seed `20260718`: 95.311 percorsi distinti e 4.689 giocate duplicate.
+- Test indipendenti aggiunti per determinismo e concentrazione del bias.
+- Test PHPUnit aggiunti per isolamento: una simulazione non modifica round, giocate o ledger.
+- Suite predisposta: 58 metodi PHPUnit, pari a 60 casi effettivi considerando il data provider di `WinningPathTest`.
+- La suite Symfony/PHPUnit completa deve essere confermata nell'ambiente dell'utente dopo l'applicazione della settima migrazione.
+
+## M1.7 — Sicurezza, robustezza e osservabilità
+
+- Tutti i 111 file PHP sotto `src`, `tests`, `migrations` e `tools` superano `php -l` con PHP 8.4.
+- Configurazioni YAML, JSON e XML validate sintatticamente.
+- Le otto migrazioni sono state applicate in sequenza tramite harness SQLite.
+- Aggiunta ottava migrazione con tabella `request_rate_limit`.
+- Schema atteso dopo tutte le migrazioni: 14 tabelle applicative, 42 indici espliciti e 55 trigger; catalogo invariato a 45 coppie.
+- Il rate limiter usa UPSERT SQLite atomico e chiavi HMAC-SHA-256.
+- Il browser non riceve JavaScript inline per il gameplay; `public/play.js` è compatibile con `script-src 'self'`.
+- Tutte le risposte principali ricevono request ID e security header.
+- `/admin/*` è consentito per default soltanto da loopback.
+- `SqliteRuntimeConfigurator` applica `foreign_keys=ON`, `busy_timeout=5000`, `synchronous=FULL`; fuori dai test abilita WAL e autocheckpoint.
+- `AuditIntegrityVerifier` ricalcola continuità e hash di tutti gli eventi.
+- `SystemDiagnostics` espone controlli read-only da UI locale e CLI.
+- Fault injection: un errore durante la creazione del round successivo deve lasciare round `ACTIVE`, giocata a 19/20 e zero payout.
+- Concorrenza stale: una seconda richiesta conservata prima della vittoria non può sovrascrivere il vincitore o creare un secondo payout.
+- `tools/domain-tests.php`: 18 verifiche indipendenti.
+- Suite predisposta: 66 metodi PHPUnit, pari a 68 casi effettivi considerando il data provider di `WinningPathTest`.
+- La suite Symfony/PHPUnit completa deve essere confermata nell’ambiente dell’utente dopo l’applicazione dell’ottava migrazione.
+
+## M1.7.1 — Correzione gerarchia eccezioni
+
+Correzione di compatibilità runtime: `DomainRuleViolation` non è più `final`, perché rappresenta la classe base delle violazioni di dominio specializzate. `ChoiceTooEarly` continua a estenderla e dispone ora di un test dedicato che carica entrambe le classi e verifica esplicitamente la gerarchia, evitando che il solo controllo `php -l` lasci passare una relazione di ereditarietà non valida.
+
+Suite prevista dopo la correzione: **67 metodi PHPUnit / 69 casi effettivi** e **18 verifiche** nel runner indipendente.
+
+## M1.7.2 — Correzione completamento atomico 20/20
+
+Correzione di compatibilità DBAL/SQLite nel flusso `SubmitChoice`. La precedente UPDATE valorizzava `completed_at` tramite `CASE WHEN :completed = 1`, ma il confronto del parametro bindato poteva lasciare `completed_at` a `NULL` mentre `current_step` passava a 20. Il trigger `trg_play_validate_completion` rifiutava correttamente questo stato intermedio con `Play completion timestamp is inconsistent`.
+
+La nuova implementazione passa direttamente `:completedAt`: `NULL` per gli step 1–19 e il timestamp server della risposta per lo step 20. L’avanzamento a 20, l’aggiunta del ventesimo bit e il timestamp di completamento avvengono nella stessa `UPDATE`.
+
+Verifiche locali della correzione:
+
+- sintassi PHP di `SubmitChoice.php`: valida;
+- runner indipendente: 18 test, 0 failure;
+- prova SQLite con lo stesso trigger di completamento: transizione 19/20 → 20/20 accettata atomicamente;
+- gli 8 test PHPUnit precedentemente falliti condividono tutti il medesimo ramo di completamento corretto.
+
+## M1.7.3 — Correzione mapping PlayScreen terminale
+
+Correzione del ramo terminale di `OpenPlayStep`: nella chiamata posizionale al costruttore di `PlayScreen` mancava un valore `null`, per cui `verificationCode` veniva passato come ventunesimo argomento (`availableAt`) invece che come ventiduesimo. PHP rilevava correttamente il tipo incompatibile (`string` al posto di `?DateTimeImmutable`).
+
+Entrambe le costruzioni di `PlayScreen` usano ora argomenti nominati. Questo elimina la dipendenza dall'ordine posizionale dei 22 parametri e rende più sicure future estensioni del DTO. Il test `PlayFlowTest::testItRecordsAllTwentyChoicesWithoutCreatingTheNextStepEarly` verifica inoltre che, a giocata terminale, `availableAt` sia `NULL` e `verificationCode` sia valorizzato.
+

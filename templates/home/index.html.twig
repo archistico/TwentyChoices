@@ -7,9 +7,30 @@
     <div class="eyebrow">Prototipo gratuito</div>
     <h1>Twenty<br>Choices</h1>
     <p>Venti scelte binarie, una strada segreta globale e un solo vincitore virtuale per round.</p>
-    <div class="amount">€ 10.000,00</div>
-    <p>Montepremio virtuale iniziale del prossimo round.</p>
-    <div class="notice">Milestone M1.1: catalogo delle coppie e snapshot immutabile delle 20 scelte.</div>
-    <p><a class="button button-primary" href="{{ path('admin_choice_pair_index') }}">Gestisci il catalogo</a></p>
+
+    {% if activeRound %}
+        <div class="amount">{{ activeRound.currentJackpotFormatted }}</div>
+        <p>Montepremio virtuale del round <strong>{{ activeRound.publicCode }}</strong>.</p>
+        <div class="notice">
+            Commitment pubblico:<br>
+            <code class="hash">{{ activeRound.commitment }}</code>
+        </div>
+        <div class="actions" style="margin-top: 22px">
+            <form method="post" action="{{ path('app_play_start') }}" class="inline-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('start_play') }}">
+                <button class="button button-primary" type="submit">Inizia una giocata gratuita</button>
+            </form>
+            <a class="button" href="{{ path('app_round_show', {publicCode: activeRound.publicCode}) }}">Visualizza il round</a>
+            <a class="button" href="{{ path('admin_round_index') }}">Gestisci i round</a>
+        </div>
+    {% else %}
+        <div class="amount">10.000,00 €</div>
+        <p>Montepremio virtuale iniziale del prossimo round.</p>
+        <div class="notice">Apri il primo round: dopo una vincita il successivo verrà creato automaticamente con 10.000,00 € virtuali.</div>
+        <div class="actions" style="margin-top: 22px">
+            <a class="button button-primary" href="{{ path('admin_round_index') }}">Apri il primo round</a>
+            <a class="button" href="{{ path('admin_choice_pair_index') }}">Gestisci il catalogo</a>
+        </div>
+    {% endif %}
 </section>
 {% endblock %}

@@ -76,6 +76,19 @@ SQL, ['limit' => $limit], ['limit' => ParameterType::INTEGER]);
         return array_map($this->hydrate(...), $rows);
     }
 
+    public function findAllActiveRegular(): array
+    {
+        $rows = $this->connection->fetchAllAssociative(<<<'SQL'
+SELECT *
+FROM choice_pair
+WHERE pair_type = 'REGULAR'
+  AND is_active = 1
+ORDER BY sort_order, code
+SQL);
+
+        return array_map($this->hydrate(...), $rows);
+    }
+
     public function findFinalDoor(): ?ChoicePair
     {
         $row = $this->connection->fetchAssociative(<<<'SQL'

@@ -1,0 +1,73 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ round.publicCode }} — TwentyChoices{% endblock %}
+
+{% block body %}
+<section class="panel round-public">
+    <div class="eyebrow">Round pubblico · simulatore gratuito</div>
+    <h1>{{ round.publicCode }}</h1>
+    <div class="amount">{{ round.currentJackpotFormatted }}</div>
+    <p>Montepremio interamente virtuale. Il commitment viene pubblicato prima delle giocate; percorso e nonce sono rivelati soltanto dopo il settlement.</p>
+
+    <div class="summary">
+        <div class="summary-item">
+            <span class="summary-value">{{ round.status }}</span>
+            <span class="summary-label">Stato</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-value">{{ round.questionCount }}/20</span>
+            <span class="summary-label">Domande congelate</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-value">1.048.576</span>
+            <span class="summary-label">Percorsi possibili</span>
+        </div>
+    </div>
+
+    <dl class="metadata-grid">
+        <div><dt>Apertura</dt><dd>{{ round.startedAt ? round.startedAt|date('d/m/Y H:i:s') ~ ' UTC' : 'In preparazione' }}</dd></div>
+        <div><dt>Commitment SHA-256</dt><dd><code class="hash">{{ round.commitment }}</code></dd></div>
+        <div><dt>Hash del set di domande</dt><dd><code class="hash">{{ round.questionSetHash }}</code></dd></div>
+        {% if round.winnerPlayPublicCode %}<div><dt>Giocata vincente</dt><dd><code>{{ round.winnerPlayPublicCode }}</code></dd></div>{% endif %}
+    </dl>
+
+    {% if verification.available %}
+        <h2 style="margin-top: 34px">Materiale pubblico di verifica</h2>
+        <div class="summary" style="margin-top: 18px">
+            <div class="summary-item">
+                <span class="summary-value">{{ verification.commitmentMatches ? 'VALIDO' : 'ERRORE' }}</span>
+                <span class="summary-label">Ricalcolo commitment</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-value">{{ round.settledAt ? round.settledAt|date('d/m/Y H:i:s') : '—' }}</span>
+                <span class="summary-label">Settlement UTC</span>
+            </div>
+        </div>
+        <dl class="metadata-grid">
+            <div><dt>Percorso vincente</dt><dd><code>{{ verification.winningPath }}</code></dd></div>
+            <div><dt>Nonce 256 bit</dt><dd><code class="hash">{{ verification.nonceHex }}</code></dd></div>
+            <div><dt>Commitment ricalcolato</dt><dd><code class="hash">{{ verification.calculatedCommitment }}</code></dd></div>
+            <div><dt>Pubblicato</dt><dd>{{ round.verificationPublishedAt ? round.verificationPublishedAt|date('d/m/Y H:i:s') ~ ' UTC' : '—' }}</dd></div>
+        </dl>
+        <div class="notice {{ verification.commitmentMatches ? 'verification-ok' : 'verification-error' }}">
+            {% if verification.commitmentMatches %}
+                Il percorso e il nonce pubblicati ricostruiscono esattamente il commitment pubblicato all'apertura del round.
+            {% else %}
+                Attenzione: il materiale pubblicato non ricostruisce il commitment originario.
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="notice">Il materiale segreto non è pubblico mentre il round è attivo. Sarà rivelato automaticamente e in modo immutabile al settlement.</div>
+    {% endif %}
+
+    <div class="actions" style="margin-top: 24px">
+        {% if round.status == 'ACTIVE' %}
+            <form method="post" action="{{ path('app_play_start') }}" class="inline-form">
+                <input type="hidden" name="_token" value="{{ csrf_token('start_play') }}">
+                <button class="button button-primary" type="submit">Partecipa gratuitamente</button>
+            </form>
+        {% endif %}
+        <a class="button" href="{{ path('app_round_history') }}">Storico verificabile</a>
+    </div>
+</section>
+{% endblock %}

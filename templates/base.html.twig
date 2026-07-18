@@ -58,6 +58,9 @@
         .badge-success { color: #b8ffd0; background: #234331; }
         .badge-muted { color: #cad1df; background: #333946; }
         .badge-system { color: #ffe5a3; background: #4c4024; }
+        .badge-error { color: #ffd1d1; background: #4d2930; }
+        .verification-ok { border: 1px solid #315e42; background: #1f3d2b; color: #c8f7d7; }
+        .verification-error { border: 1px solid #874550; background: #4d2930; color: #ffd1d1; }
         .flash { margin-bottom: 18px; padding: 13px 15px; border-radius: 10px; border: 1px solid var(--border); }
         .flash-success { background: #1f3d2b; color: #b8ffd0; }
         .flash-error { background: #4d2930; color: #ffd1d1; }
@@ -72,10 +75,44 @@
         .error-box { margin-bottom: 18px; padding: 13px 15px; border: 1px solid #874550; border-radius: 10px; background: #4d2930; color: #ffd1d1; }
         .form-footer { display: flex; gap: 10px; margin-top: 24px; }
         .inline-form { display: inline; }
+        .metadata-grid { display: grid; gap: 14px; margin: 24px 0 0; }
+        .metadata-grid > div { display: grid; gap: 5px; padding-top: 14px; border-top: 1px solid var(--border); }
+        .metadata-grid dt { color: var(--muted); font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+        .metadata-grid dd { margin: 0; }
+        .hash { overflow-wrap: anywhere; word-break: break-word; }
+        .round-public { max-width: 900px; margin: 0 auto; }
+        .play-shell { max-width: 980px; margin: 0 auto; }
+        .play-topline { display: flex; justify-content: space-between; gap: 28px; align-items: flex-start; }
+        .play-title { margin: 8px 0 0; font-size: clamp(2rem, 5vw, 3.8rem); }
+        .play-jackpot { display: grid; gap: 4px; text-align: right; }
+        .play-jackpot span { color: var(--muted); font-size: .82rem; }
+        .play-jackpot strong { font-size: clamp(1.6rem, 4vw, 2.7rem); }
+        .play-meta { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 20px 0 28px; color: var(--muted); }
+        .choice-form { display: grid; gap: 18px; }
+        .choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+        .choice-card { min-height: 270px; padding: 28px; border: 1px solid #536177; border-radius: 22px; background: linear-gradient(145deg, #222a38, #171c26); color: var(--text); cursor: pointer; transition: transform .15s ease, border-color .15s ease, opacity .15s ease; }
+        .choice-card:not([disabled]):hover { transform: translateY(-3px); border-color: var(--accent); }
+        .choice-card[disabled] { opacity: .5; cursor: wait; }
+        .choice-door { border-width: 2px; }
+        .choice-door-red { background: linear-gradient(145deg, #642d36, #28171c); border-color: #b65766; }
+        .choice-door-blue { background: linear-gradient(145deg, #214e78, #152536); border-color: #4d8ec6; }
+        .choice-label { display: block; font-size: clamp(1.8rem, 5vw, 4rem); font-weight: 850; line-height: 1.05; }
+        .choice-status { min-height: 29px; text-align: center; color: var(--warning); font-weight: 700; }
+        .play-progress { height: 8px; margin-top: 28px; overflow: hidden; border-radius: 999px; background: #2b3341; }
+        .play-progress-bar { height: 100%; border-radius: inherit; background: var(--accent); }
+        .play-security-note { text-align: center; font-size: .88rem; color: var(--muted); }
+        .select-input { width: 100%; min-height: 43px; padding: 9px 11px; color: var(--text); background: #111722; border: 1px solid #465064; border-radius: 9px; font: inherit; }
+        .button-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .stat-bar { display: flex; height: 12px; overflow: hidden; border-radius: 999px; background: #2b3341; margin-bottom: 5px; }
+        .stat-bar-a { display: block; background: #4aa3d3; }
+        .stat-bar-b { display: block; background: #a66fd1; }
         @media (max-width: 760px) {
             .topbar-inner, .page-header, .form-footer { align-items: stretch; }
             .page-header { flex-direction: column; }
-            .form-grid { grid-template-columns: 1fr; }
+            .form-grid, .choice-grid { grid-template-columns: 1fr; }
+            .play-topline { flex-direction: column; }
+            .play-jackpot { text-align: left; }
+            .choice-card { min-height: 180px; }
             .field-full { grid-column: auto; }
             main { padding-top: 30px; }
         }
@@ -86,6 +123,10 @@
     <nav class="topbar-inner" aria-label="Navigazione principale">
         <a class="brand" href="{{ path('app_home') }}">TwentyChoices</a>
         <a class="nav-link" href="{{ path('admin_choice_pair_index') }}">Catalogo scelte</a>
+        <a class="nav-link" href="{{ path('admin_round_index') }}">Round</a>
+        <a class="nav-link" href="{{ path('admin_simulation_index') }}">Simulazioni</a>
+        <a class="nav-link" href="{{ path('admin_diagnostics_index') }}">Diagnostica</a>
+        <a class="nav-link" href="{{ path('app_round_history') }}">Storico pubblico</a>
     </nav>
 </header>
 <main>

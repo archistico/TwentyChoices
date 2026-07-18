@@ -6,6 +6,6 @@ namespace App\Game\Domain\Exception;
 
 use DomainException;
 
-final class DomainRuleViolation extends DomainException
+class DomainRuleViolation extends DomainException
 {
 }
