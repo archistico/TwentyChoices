@@ -1,0 +1,77 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Catalogo scelte — TwentyChoices{% endblock %}
+
+{% block body %}
+<header class="page-header">
+    <div>
+        <div class="eyebrow">Amministrazione</div>
+        <h1>Catalogo delle coppie</h1>
+        <p>Le prime 19 scelte di ogni round provengono dalle coppie regolari attive. La porta finale è obbligatoria e protetta.</p>
+    </div>
+    <a class="button button-primary" href="{{ path('admin_choice_pair_create') }}">+ Nuova coppia</a>
+</header>
+
+<div class="summary">
+    <div class="summary-item">
+        <span class="summary-value">{{ pairs|length }}</span>
+        <span class="summary-label">coppie complessive</span>
+    </div>
+    <div class="summary-item">
+        <span class="summary-value">{{ activeRegular }}</span>
+        <span class="summary-label">coppie regolari attive</span>
+    </div>
+    <div class="summary-item">
+        <span class="summary-value">{{ activeRegular >= 19 ? 'Pronto' : 'Non pronto' }}</span>
+        <span class="summary-label">requisito minimo di 19</span>
+    </div>
+</div>
+
+<div class="table-wrap">
+<table>
+    <thead>
+    <tr>
+        <th>Ordine</th>
+        <th>Codice</th>
+        <th>Scelta A</th>
+        <th>Scelta B</th>
+        <th>Categoria</th>
+        <th>Stato</th>
+        <th>Azioni</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for pair in pairs %}
+        <tr>
+            <td>{{ pair.sortOrder }}</td>
+            <td><code>{{ pair.code }}</code></td>
+            <td>{{ pair.optionAText }}</td>
+            <td>{{ pair.optionBText }}</td>
+            <td>{{ pair.category }}</td>
+            <td>
+                {% if pair.system %}<span class="badge badge-system">Finale obbligatorio</span>{% endif %}
+                <span class="badge {{ pair.active ? 'badge-success' : 'badge-muted' }}">{{ pair.active ? 'Attiva' : 'Disattivata' }}</span>
+            </td>
+            <td>
+                <div class="actions">
+                    <a class="button button-quiet" href="{{ path('admin_choice_pair_edit', {id: pair.id}) }}">Modifica</a>
+                    {% if not pair.system %}
+                        <form class="inline-form" method="post" action="{{ path('admin_choice_pair_toggle', {id: pair.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('choice_pair_toggle_' ~ pair.id) }}">
+                            <button class="button button-quiet" type="submit">{{ pair.active ? 'Disattiva' : 'Attiva' }}</button>
+                        </form>
+                        <form class="inline-form" method="post" action="{{ path('admin_choice_pair_delete', {id: pair.id}) }}" onsubmit="return confirm('Eliminare definitivamente questa coppia?');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('choice_pair_delete_' ~ pair.id) }}">
+                            <button class="button button-danger" type="submit">Elimina</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+    {% else %}
+        <tr><td colspan="7">Il catalogo è vuoto.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

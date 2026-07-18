@@ -1,0 +1,19 @@
+parameters:
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/Game/Domain/'
+            - '../src/Catalog/Domain/'
+
+    App\Catalog\Domain\Repository\ChoicePairRepository:
+        alias: App\Catalog\Infrastructure\Persistence\DoctrineDbalChoicePairRepository
+
+    App\Catalog\Domain\Repository\QuestionSetSnapshotStore:
+        alias: App\Catalog\Infrastructure\Persistence\DoctrineDbalQuestionSetSnapshotStore

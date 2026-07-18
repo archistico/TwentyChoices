@@ -1,0 +1,51 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ title }} — TwentyChoices{% endblock %}
+
+{% block body %}
+<header class="page-header">
+    <div>
+        <div class="eyebrow">Catalogo scelte</div>
+        <h1>{{ title }}</h1>
+        {% if pair and pair.system %}
+            <p>Questa è la coppia finale di sistema: può essere rinominata, ma non disattivata o eliminata.</p>
+        {% else %}
+            <p>La coppia sarà disponibile per le prime 19 posizioni dei round futuri.</p>
+        {% endif %}
+    </div>
+</header>
+
+<section class="panel">
+    {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+    <form method="post">
+        <input type="hidden" name="_token" value="{{ csrf_token(csrfId) }}">
+        <div class="form-grid">
+            <div class="field field-full">
+                <label for="code">Codice</label>
+                <input id="code" name="code" maxlength="60" required value="{{ data.code }}" {{ pair and pair.system ? 'readonly' : '' }}>
+                <div class="help">Lettere minuscole, numeri e trattini; esempio: <code>mare-montagna</code>.</div>
+            </div>
+            <div class="field">
+                <label for="option_a">Opzione A</label>
+                <input id="option_a" name="option_a" maxlength="120" required value="{{ data.optionA }}">
+            </div>
+            <div class="field">
+                <label for="option_b">Opzione B</label>
+                <input id="option_b" name="option_b" maxlength="120" required value="{{ data.optionB }}">
+            </div>
+            <div class="field">
+                <label for="category">Categoria</label>
+                <input id="category" name="category" maxlength="60" required value="{{ data.category }}">
+            </div>
+            <div class="field">
+                <label for="sort_order">Ordine editoriale</label>
+                <input id="sort_order" name="sort_order" type="number" min="0" required value="{{ data.sortOrder }}">
+            </div>
+        </div>
+        <div class="form-footer">
+            <button class="button button-primary" type="submit">Salva</button>
+            <a class="button button-quiet" href="{{ path('admin_choice_pair_index') }}">Annulla</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

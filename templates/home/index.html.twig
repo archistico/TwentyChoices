@@ -1,0 +1,15 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}TwentyChoices — Simulatore tecnico{% endblock %}
+
+{% block body %}
+<section class="panel">
+    <div class="eyebrow">Prototipo gratuito</div>
+    <h1>Twenty<br>Choices</h1>
+    <p>Venti scelte binarie, una strada segreta globale e un solo vincitore virtuale per round.</p>
+    <div class="amount">€ 10.000,00</div>
+    <p>Montepremio virtuale iniziale del prossimo round.</p>
+    <div class="notice">Milestone M1.1: catalogo delle coppie e snapshot immutabile delle 20 scelte.</div>
+    <p><a class="button button-primary" href="{{ path('admin_choice_pair_index') }}">Gestisci il catalogo</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,50 @@
+#!/usr/bin/env php
+<?php
+
+if (!file_exists(dirname(__DIR__).'/vendor/symfony/phpunit-bridge/bin/simple-phpunit.php')) {
+    echo "Unable to find simple-phpunit.php. Run composer install first.\n";
+    exit(1);
+}
+
+if (false === getenv('SYMFONY_PHPUNIT_DIR')) {
+    putenv('SYMFONY_PHPUNIT_DIR='.__DIR__.'/.phpunit');
+}
+
+// On Windows the PHPUnit Bridge expects COMPOSER_BINARY to be a readable file path.
+// A bare "composer" command makes it try file_get_contents("composer").
+if (false === getenv('COMPOSER_BINARY')) {
+    $commands = '\\' === DIRECTORY_SEPARATOR
+        ? [
+            'where.exe composer.phar 2> NUL',
+            'where.exe composer.bat 2> NUL',
+            'where.exe composer.cmd 2> NUL',
+            'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "(Get-Command composer -ErrorAction SilentlyContinue).Source"',
+        ]
+        : ['command -v composer.phar 2>/dev/null', 'command -v composer 2>/dev/null'];
+
+    foreach ($commands as $command) {
+        $candidates = preg_split('/\r?\n/', trim((string) shell_exec($command)));
+
+        foreach ($candidates ?: [] as $candidate) {
+            if ('' === $candidate || !is_file($candidate)) {
+                continue;
+            }
+
+            $paths = [$candidate];
+
+            if ('\\' === DIRECTORY_SEPARATOR && 'composer.ps1' === strtolower(basename($candidate))) {
+                $paths[] = dirname($candidate).DIRECTORY_SEPARATOR.'composer.phar';
+                $paths[] = dirname($candidate).DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'apps'.DIRECTORY_SEPARATOR.'composer'.DIRECTORY_SEPARATOR.'current'.DIRECTORY_SEPARATOR.'composer.phar';
+            }
+
+            foreach ($paths as $path) {
+                if (is_file($path)) {
+                    putenv('COMPOSER_BINARY='.realpath($path));
+                    break 3;
+                }
+            }
+        }
+    }
+}
+
+require dirname(__DIR__).'/vendor/symfony/phpunit-bridge/bin/simple-phpunit.php';
