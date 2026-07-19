@@ -76,17 +76,31 @@ $tests['winning path round-trip'] = static function (): void {
 };
 
 $tests['commitment detects tampering'] = static function (): void {
+    $roundCode = 'R-1';
     $path = WinningPath::fromInt(42);
     $nonce = str_repeat("\x55", 32);
     $questions = hash('sha256', 'questions');
-    $commitment = RoundCommitment::create('R-1', $questions, $path, $nonce);
+    $commitment = RoundCommitment::create($roundCode, $questions, $path, $nonce);
 
-    if (!$commitment->verifies('R-1', $questions, $path, $nonce)) {
+    if (!$commitment->verifies($roundCode, $questions, $path, $nonce)) {
         throw new RuntimeException('The original commitment does not verify.');
     }
 
-    if ($commitment->verifies('R-1', $questions, WinningPath::fromInt(43), $nonce)) {
+    $tamperedNonce = $nonce;
+    $tamperedNonce[0] = chr(ord($tamperedNonce[0]) ^ 1);
+    $tamperedQuestionHash = ($questions[0] === '0' ? '1' : '0').substr($questions, 1);
+
+    if ($commitment->verifies($roundCode, $questions, WinningPath::fromInt(43), $nonce)) {
         throw new RuntimeException('A modified path incorrectly verifies.');
+    }
+    if ($commitment->verifies($roundCode, $questions, $path, $tamperedNonce)) {
+        throw new RuntimeException('A modified nonce incorrectly verifies.');
+    }
+    if ($commitment->verifies('R-2', $questions, $path, $nonce)) {
+        throw new RuntimeException('A modified round code incorrectly verifies.');
+    }
+    if ($commitment->verifies($roundCode, $tamperedQuestionHash, $path, $nonce)) {
+        throw new RuntimeException('A modified question-set hash incorrectly verifies.');
     }
 };
 
@@ -105,6 +119,18 @@ $tests['authenticated encryption rejects tampering'] = static function (): void 
     try {
         $cipher->decrypt($encrypted, $context);
         throw new RuntimeException('A tampered ciphertext was accepted.');
+    } catch (DomainRuleViolation) {
+    }
+
+    $pathCiphertext = $cipher->encrypt('10110001101001011100', 'round:TEST:winning-path');
+    try {
+        $cipher->decrypt($pathCiphertext, 'round:TEST:commitment-nonce');
+        throw new RuntimeException('A path ciphertext was accepted under the nonce context.');
+    } catch (DomainRuleViolation) {
+    }
+    try {
+        $cipher->decrypt($pathCiphertext, 'round:OTHER:winning-path');
+        throw new RuntimeException('A ciphertext was accepted under another round context.');
     } catch (DomainRuleViolation) {
     }
 };

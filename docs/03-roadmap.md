@@ -152,7 +152,7 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 - [x] Minimo 19 coppie regolari attive.
 - [x] Snapshot immutabili e selezione 19 + porta finale.
 - [x] Apertura atomica di un solo round `ACTIVE`.
-- [ ] **Gate:** catalogo e round coerenti senza effetti retroattivi; M1.9.2.1.3 corregge il distacco atomico del riferimento vivo emerso nella prima suite completa.
+- [x] **Gate:** catalogo e round coerenti senza effetti retroattivi; M1.9.2.1.3 validata con suite completa e gate transazionale verdi.
 
 ### M1.9.2.1 — Runtime Compatibility & Monotonic Timing Hardening
 
@@ -161,14 +161,15 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 - [x] `composer check-platform-reqs` aggiunto a bootstrap e CI.
 - [x] Timer browser convertito da epoch assoluti/`Date.now()` a durate relative/`performance.now()`.
 - [x] Policy e test anti-regressione aggiunti.
-- [ ] **Gate:** validazione completa PHP 8.4+ insieme al gate M1.9.2 tramite la hotfix M1.9.2.1.3.
+- [x] **Gate:** validazione completa PHP 8.4+ insieme al gate M1.9.2 tramite la hotfix M1.9.2.1.3.
 
 ### M1.9.3 — Cryptographic Commitment Verification
 
-- [ ] Ricalcolo end-to-end del commitment.
-- [ ] Tamper test su percorso, nonce, round e question set.
-- [ ] Nessun reveal durante `ACTIVE`.
-- [ ] **Gate:** ogni manomissione deve essere rilevabile.
+- [x] Ricalcolo end-to-end del commitment su un round reale transazionale.
+- [x] Tamper test indipendenti su percorso, nonce, round e question set.
+- [x] Cifratura autenticata contestuale e materiale persistito immutabile.
+- [x] Nessun reveal durante `ACTIVE` in DB, log, endpoint, payload HTTP e DOM.
+- [ ] **Gate:** validazione esplicita con `verify-m1.9.3.ps1/.sh`; ogni manomissione deve essere rilevabile.
 
 ### M1.9.4 — Play Start & Accounting Verification
 

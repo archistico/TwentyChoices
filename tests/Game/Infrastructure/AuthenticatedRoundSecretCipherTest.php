@@ -53,4 +53,22 @@ final class AuthenticatedRoundSecretCipherTest extends TestCase
         $this->expectException(DomainRuleViolation::class);
         $cipher->decrypt($encrypted, 'round:OTHER:nonce');
     }
+    public function testPathAndNonceCiphertextsCannotBeSwappedWithinTheSameRound(): void
+    {
+        $cipher = new AuthenticatedRoundSecretCipher('a-test-secret-with-sufficient-entropy');
+        $roundId = '01TESTROUND';
+        $encryptedPath = $cipher->encrypt('10110001101001011100', 'round:'.$roundId.':winning-path');
+        $encryptedNonce = $cipher->encrypt(str_repeat("\x2A", 32), 'round:'.$roundId.':commitment-nonce');
+
+        try {
+            $cipher->decrypt($encryptedPath, 'round:'.$roundId.':commitment-nonce');
+            self::fail('The winning-path ciphertext must not decrypt as the nonce.');
+        } catch (DomainRuleViolation) {
+            self::assertTrue(true);
+        }
+
+        $this->expectException(DomainRuleViolation::class);
+        $cipher->decrypt($encryptedNonce, 'round:'.$roundId.':winning-path');
+    }
+
 }

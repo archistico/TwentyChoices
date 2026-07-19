@@ -25,4 +25,48 @@ final class RoundCommitmentTest extends TestCase
             $nonce,
         ));
     }
+
+    /** @dataProvider tamperedInputProvider */
+    public function testEveryBoundInputIndependentlyChangesTheCommitment(string $tamperedInput): void
+    {
+        $roundCode = 'R-20260719-ABCDEF123456';
+        $questionSetHash = hash('sha256', 'question-set');
+        $path = WinningPath::fromBitString('10110001101001011100');
+        $nonce = str_repeat("\x5A", 32);
+        $original = RoundCommitment::create($roundCode, $questionSetHash, $path, $nonce)->hash;
+
+        $candidateRoundCode = $roundCode;
+        $candidateQuestionHash = $questionSetHash;
+        $candidatePath = $path;
+        $candidateNonce = $nonce;
+
+        if ($tamperedInput === 'path') {
+            $bits = $path->toBitString();
+            $candidatePath = WinningPath::fromBitString(($bits[0] === '0' ? '1' : '0').substr($bits, 1));
+        } elseif ($tamperedInput === 'nonce') {
+            $candidateNonce[0] = chr(ord($candidateNonce[0]) ^ 1);
+        } elseif ($tamperedInput === 'round-code') {
+            $candidateRoundCode = 'R-20260719-ABCDEF123457';
+        } elseif ($tamperedInput === 'question-hash') {
+            $candidateQuestionHash = ($questionSetHash[0] === '0' ? '1' : '0').substr($questionSetHash, 1);
+        }
+
+        $tampered = RoundCommitment::create(
+            $candidateRoundCode,
+            $candidateQuestionHash,
+            $candidatePath,
+            $candidateNonce,
+        )->hash;
+
+        self::assertNotSame($original, $tampered);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function tamperedInputProvider(): iterable
+    {
+        yield 'one path bit' => ['path'];
+        yield 'one nonce byte' => ['nonce'];
+        yield 'round public code' => ['round-code'];
+        yield 'question-set hash' => ['question-hash'];
+    }
 }

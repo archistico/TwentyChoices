@@ -1,6 +1,6 @@
 # M1.9 — Verification & Hardening Plan
 
-> Stato corrente: **M1.9.1 validata; M1.9.2 e M1.9.2.1 implementate; M1.9.2.1.3 completa le hotfix emerse dalla prima esecuzione reale del gate, includendo il distacco atomico del riferimento vivo degli snapshot, ed è in attesa di validazione del gate combinato**. Evidenze: `docs/17-m1.9.2-catalog-round-verification.md` e `docs/18-m1.9.2.1-runtime-timing-hardening.md`.
+> Stato corrente: **M1.9.1, M1.9.2 e M1.9.2.1.3 validate; M1.9.3 Cryptographic Commitment Verification implementata e in attesa di validazione**. Evidenze: `docs/17-m1.9.2-catalog-round-verification.md`, `docs/18-m1.9.2.1-runtime-timing-hardening.md` e `docs/22-m1.9.3-cryptographic-commitment-verification.md`.
 
 ## Obiettivo
 
@@ -187,6 +187,12 @@ Durante un round `ACTIVE` verificare che percorso e nonce non siano disponibili 
 ### Gate
 
 **Il commitment originale è riproducibile solo con il materiale corretto e ogni manomissione è rilevabile.**
+
+### Implementazione M1.9.3
+
+Il comando transazionale `app:verification:cryptographic-commitment` apre un round reale, ricostruisce il commitment dai segreti decifrati internamente, prova separatamente le quattro manomissioni obbligatorie, verifica binding/autenticazione dei ciphertext, immutabilità SQLite e assenza dei segreti dai canali runtime durante `ACTIVE`. Un test HTTP E2E controlla inoltre body/header/DOM dei principali endpoint pubblici. Tutto lo scenario DB viene rollbackato.
+
+Dettagli e checklist: `docs/22-m1.9.3-cryptographic-commitment-verification.md`.
 
 ---
 

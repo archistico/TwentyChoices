@@ -408,3 +408,30 @@ Causa: M1.9.2 affidava il distacco esclusivamente a `ON DELETE SET NULL`, che di
 Correzione: undicesima migrazione `Version20260719000200`, con trigger `trg_choice_pair_detach_round_snapshot_reference` che prima della DELETE di una coppia `REGULAR` nullifica atomicamente soltanto il riferimento vivo. `choice_pair_source_id_snapshot` e tutto il materiale storico restano immutabili. La migrazione ripara anche eventuali riferimenti vivi già orfani.
 
 Il gate corrente è `scripts/verify-m1.9.2.1.3.ps1/.sh` e riesegue integralmente i gate precedenti.
+
+## M1.9.3 — Cryptographic Commitment Verification
+
+Baseline: **M1.9.2.1.3 validata integralmente dall'utente**.
+
+Rafforzamenti introdotti:
+
+- nuovo `CryptographicCommitmentGateVerifier` transazionale;
+- nuovo comando `app:verification:cryptographic-commitment --env=test`;
+- ricostruzione end-to-end del commitment dal vero round persistito;
+- quattro tamper indipendenti obbligatori: bit percorso, byte nonce, codice round, hash question set;
+- verifica di autenticazione e context binding dei ciphertext percorso/nonce;
+- tentativi diretti di modifica del materiale crittografico persistito respinti dai trigger SQLite;
+- controllo non-disclosure durante `ACTIVE` su colonne pubbliche, audit e log;
+- nuovo test HTTP E2E sui payload/DOM degli endpoint pubblici;
+- CI estesa con il gate M1.9.3.
+
+Suite predisposta: **104 metodi PHPUnit / 109 casi effettivi**, più **20 verifiche indipendenti**.
+
+Gate operativo:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.3.ps1
+```
+
+Dettagli: `docs/22-m1.9.3-cryptographic-commitment-verification.md`.
+

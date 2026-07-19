@@ -73,6 +73,25 @@ Lo script verifica prima la coerenza della baseline PHP 8.4/Composer e la policy
 
 Dettagli e checklist: `docs/17-m1.9.2-catalog-round-verification.md` e `docs/18-m1.9.2.1-runtime-timing-hardening.md`.
 
+
+## Gate M1.9.3 — Cryptographic Commitment Verification
+
+Dopo la baseline validata M1.9.2.1.3 usare:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.3.ps1
+```
+
+oppure:
+
+```bash
+./scripts/verify-m1.9.3.sh
+```
+
+Lo script riesegue integralmente la baseline precedente e poi `app:verification:cryptographic-commitment --env=test`. Il gate apre un round soltanto dentro una transazione di verifica, ricostruisce il commitment, prova le quattro manomissioni obbligatorie, controlla autenticazione/context binding dei ciphertext, immutabilità SQLite e non-disclosure dei segreti durante `ACTIVE`; infine esegue rollback e ricontrolla il release manifest.
+
+Dettagli: `docs/22-m1.9.3-cryptographic-commitment-verification.md`.
+
 ### Esecuzione diretta PHPUnit
 
 Anche l'esecuzione diretta è deterministica:
