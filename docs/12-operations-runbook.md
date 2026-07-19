@@ -110,6 +110,24 @@ Lo script riesegue tutta la baseline M1.9.3 e poi `app:verification:play-start-a
 
 Dettagli: `docs/23-m1.9.4-play-start-accounting-verification.md`.
 
+## Gate M1.9.5 — Step, Timer & Anti-Replay Verification
+
+Dopo la baseline validata M1.9.4.1 usare:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.5.ps1
+```
+
+oppure:
+
+```bash
+./scripts/verify-m1.9.5.sh
+```
+
+Il gate riesegue integralmente la baseline precedente, sincronizza la migration che rende esatto il confine temporale SQLite e poi esegue `app:verification:step-timer-anti-replay --env=test`. Vengono provati 1.999/2.000 millisecondi, refresh senza reset del timer, rotazione token, doppia scheda, replay idempotente, ownership della play e input client non autorevoli.
+
+Dettagli: `docs/25-m1.9.5-step-timer-anti-replay-verification.md`.
+
 ### Esecuzione diretta PHPUnit
 
 Anche l'esecuzione diretta è deterministica:

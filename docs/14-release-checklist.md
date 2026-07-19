@@ -54,12 +54,12 @@ La checklist di release tecnica non sostituisce la fase M1.9. Prima di riprender
 In particolare il gate finale richiede una full journey da installazione pulita fino a vincita, settlement, reset, credito, nuovo round, verifica pubblica, riconciliazione ledger, audit, diagnostica e restart.
 
 
-## Gate M1.9.4
+## Gate M1.9.5
 
-Prima di promuovere M1.9.4 eseguire da una working copy valida:
+Prima di promuovere M1.9.5 eseguire da una working copy valida:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.4.1.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.5.ps1
 ```
 
-Il comando deve completare la regressione M1.9.3, la suite completa e il gate `app:verification:play-start-accounting --env=test` senza errori.
+Il comando deve completare tutta la baseline validata M1.9.4.1, la suite completa e il gate `app:verification:step-timer-anti-replay --env=test` senza errori. Il report deve mostrare verdi il confine 1.999/2.000 millisecondi, la rotazione token, il replay idempotente e l'ownership della play.

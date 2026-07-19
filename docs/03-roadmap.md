@@ -177,7 +177,7 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 - [x] Una sola giocata aperta per sessione/round.
 - [x] Contabilizzazione virtuale 1,00 = 0,80 + 0,20 con vincoli DB per play/correlation.
 - [x] Doppio avvio idempotente sulla stessa sessione; POST privo di identità pre-esistente non crea una quota.
-- [ ] **Gate:** validazione esplicita con `verify-m1.9.4.1.ps1/.sh`; una partecipazione genera una sola giocata e una sola quota, con schema SQLite verificato prima dello scenario.
+- [x] **Gate:** validazione esplicita con `verify-m1.9.4.1.ps1/.sh`; una partecipazione genera una sola giocata e una sola quota, con schema SQLite verificato prima dello scenario.
 
 #### M1.9.4.1 — Accounting Schema Enforcement Hotfix
 
@@ -185,14 +185,15 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 - [x] Trigger rafforzato: seconda componente dello stesso tipo sulla stessa play sempre respinta.
 - [x] Preflight del gate su `sqlite_master`.
 - [x] Migrazioni test sincronizzate immediatamente prima del gate.
-- [ ] **Gate:** suite completa + `Duplicate accounting protection` verde per entry, jackpot e organizer.
+- [x] **Gate:** suite completa + `Duplicate accounting protection` verde per entry, jackpot e organizer.
 
 ### M1.9.5 — Step, Timer & Anti-Replay Verification
 
-- [ ] Timer server-side 1,999 s rifiutato / 2,000 s accettato.
-- [ ] Refresh, token rotation, replay e doppia scheda.
-- [ ] Tentativi di salto step e manipolazione HTTP.
-- [ ] **Gate:** il client non controlla la macchina a stati.
+- [x] Timer server-side 1,999 s rifiutato / 2,000 s accettato a livello dominio, applicazione e SQLite.
+- [x] Refresh, token rotation, replay idempotente e doppia scheda.
+- [x] Tentativi di salto step e manipolazione HTTP con campi non autorevoli.
+- [x] Idempotency key `request_id` scoped per giocata.
+- [ ] **Gate:** validazione esplicita con `verify-m1.9.5.ps1/.sh`; il client non controlla la macchina a stati.
 
 ### M1.9.6 — Full Losing Journey Verification
 

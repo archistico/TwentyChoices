@@ -39,6 +39,8 @@ Lo step mostrato è sempre `current_step + 1`. Alla prima visualizzazione il ser
 - `shown_at`;
 - `available_at = shown_at + 2 secondi`.
 
+Il confine è esatto anche nello schema SQLite: **1.999 millisecondi trascorsi vengono rifiutati, 2.000 millisecondi esatti sono validi**. La migration M1.9.5 calcola la distanza in microsecondi interi e non usa più una tolleranza floating-point basata su `julianday()`.
+
 Un refresh non modifica `shown_at`, `available_at` o la posizione delle opzioni. Viene invece ruotato il token monouso: l'ultima pagina caricata è l'unica che può inviare la risposta.
 
 ## Invio della scelta
@@ -58,7 +60,7 @@ Una risposta accettata aggiorna nello stesso commit:
 2. `play`, con avanzamento di un solo step e aggiunta di un solo bit;
 3. audit, con tempi server e client.
 
-L'UUID rende idempotente il doppio invio della stessa richiesta. Una richiesta con un vecchio token viene rifiutata.
+L'UUID rende idempotente il doppio invio della stessa richiesta ed è univoco nello scope della singola giocata `(play_id, request_id)`. Un replay non può cambiare l'opzione già acquisita né aggiungere un secondo bit. Una richiesta con un vecchio token viene rifiutata.
 
 ## Completamento 20/20
 
@@ -91,3 +93,8 @@ Sono registrati almeno:
 - `ROUND_SETTLED`.
 
 Gli eventi formano una catena append-only tramite `previous_hash` ed `event_hash`.
+
+
+## Verifica M1.9.5
+
+Il gate `app:verification:step-timer-anti-replay --env=test` e i test HTTP con clock congelato provano il confine 1.999/2.000 ms, refresh senza reset, doppia scheda, token rotation, replay e campi POST falsificati. Step, round, play, percorso e timestamp inviati dal client non sono mai fonti autorevoli.

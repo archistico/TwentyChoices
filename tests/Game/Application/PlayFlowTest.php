@@ -118,6 +118,53 @@ final class PlayFlowTest extends KernelTestCase
     }
 
 
+    public function testSubmitChoiceRejectsAt1999MillisecondsAndAcceptsAtExactly2000(): void
+    {
+        [$sessionId, $play] = $this->startPlay();
+        $screen = self::getContainer()->get(OpenPlayStep::class)->open($play->publicCode, $sessionId);
+        $submit = self::getContainer()->get(SubmitChoice::class);
+
+        $this->clock->advance('+1999 milliseconds');
+        try {
+            $submit->submit(
+                $play->publicCode,
+                $sessionId,
+                (string) $screen->challengeToken,
+                'A',
+                (string) $screen->requestId,
+                999_999,
+            );
+            self::fail('A choice at 1,999 ms must be rejected.');
+        } catch (ChoiceTooEarly $exception) {
+            self::assertSame(1, $exception->remainingMilliseconds);
+        }
+
+        self::assertSame(0, (int) $this->connection->fetchOne(
+            'SELECT current_step FROM play WHERE id = :id',
+            ['id' => $play->id],
+        ));
+
+        $this->clock->advance('+1 millisecond');
+        $accepted = $submit->submit(
+            $play->publicCode,
+            $sessionId,
+            (string) $screen->challengeToken,
+            'A',
+            (string) $screen->requestId,
+            0,
+        );
+
+        self::assertSame(1, $accepted->acceptedStep);
+        self::assertSame(1, (int) $this->connection->fetchOne(
+            'SELECT current_step FROM play WHERE id = :id',
+            ['id' => $play->id],
+        ));
+        self::assertSame('0', (string) $this->connection->fetchOne(
+            'SELECT chosen_path_bits FROM play WHERE id = :id',
+            ['id' => $play->id],
+        ));
+    }
+
     public function testRelativeBrowserTimingIsClampedAfterTheServerWaitHasExpired(): void
     {
         [$sessionId, $play] = $this->startPlay();
@@ -163,6 +210,49 @@ final class PlayFlowTest extends KernelTestCase
         self::assertSame('1', (string) $this->connection->fetchOne(
             'SELECT chosen_path_bits FROM play WHERE id = :id',
             ['id' => $play->id],
+        ));
+    }
+
+    public function testTheSameRequestIdIsScopedPerPlayAndDoesNotCollideAcrossParticipants(): void
+    {
+        self::getContainer()->get(OpenRound::class)->open();
+        $sessions = self::getContainer()->get(PlayerSessionRegistry::class);
+        $start = self::getContainer()->get(StartPlay::class);
+        $open = self::getContainer()->get(OpenPlayStep::class);
+        $submit = self::getContainer()->get(SubmitChoice::class);
+        $requestId = (string) Uuid::v7();
+
+        $firstSession = $sessions->resolve(null);
+        $firstPlay = $start->start($firstSession->id);
+        $firstScreen = $open->open($firstPlay->publicCode, $firstSession->id);
+        $this->clock->advance('+2 seconds');
+        $firstResult = $submit->submit(
+            $firstPlay->publicCode,
+            $firstSession->id,
+            (string) $firstScreen->challengeToken,
+            'A',
+            $requestId,
+            2_000,
+        );
+
+        $secondSession = $sessions->resolve(null);
+        $secondPlay = $start->start($secondSession->id);
+        $secondScreen = $open->open($secondPlay->publicCode, $secondSession->id);
+        $this->clock->advance('+2 seconds');
+        $secondResult = $submit->submit(
+            $secondPlay->publicCode,
+            $secondSession->id,
+            (string) $secondScreen->challengeToken,
+            'B',
+            $requestId,
+            2_000,
+        );
+
+        self::assertSame(1, $firstResult->acceptedStep);
+        self::assertSame(1, $secondResult->acceptedStep);
+        self::assertSame(2, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM play_step WHERE request_id = :requestId',
+            ['requestId' => $requestId],
         ));
     }
 

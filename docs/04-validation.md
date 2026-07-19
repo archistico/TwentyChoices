@@ -480,3 +480,32 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.4.1.ps1
 ```
 
 Suite predisposta dopo la hotfix: **109 metodi PHPUnit / 114 casi effettivi**, più **20 verifiche indipendenti**.
+
+
+## M1.9.5 — Step, Timer & Anti-Replay Verification
+
+Baseline: **M1.9.4.1 validata integralmente dall'utente**.
+
+Rafforzamenti introdotti:
+
+- migration `Version20260719000500` con confine SQLite esatto di 2.000.000 microsecondi;
+- rimozione della tolleranza `julianday < 1.999`;
+- indice `uniq_play_step_request` scoped a `(play_id, request_id)`;
+- test applicativo esatto: 1.999 ms rifiutati, 2.000 ms accettati;
+- nuovo `StepTimerAntiReplayGateVerifier` transazionale;
+- nuovo comando `app:verification:step-timer-anti-replay --env=test`;
+- refresh e doppia scheda senza reset del timer, con token rotation;
+- replay idempotente che non può cambiare opzione o aggiungere bit;
+- validazione di ownership play/sessione e input non validi;
+- nuovo E2E con `FrozenClock` e campi HTTP falsificati/non autorevoli;
+- CI estesa con il gate M1.9.5.
+
+Suite predisposta: **115 metodi PHPUnit / 120 casi effettivi**, più **20 verifiche indipendenti**.
+
+Gate operativo:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.5.ps1
+```
+
+Dettagli: `docs/25-m1.9.5-step-timer-anti-replay-verification.md`.

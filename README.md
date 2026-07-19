@@ -6,9 +6,9 @@ Prototipo gratuito e simulatore tecnico di un gioco a venti scelte binarie. Ogni
 
 ## Stato del progetto
 
-Milestone corrente: **M1.9.4.1 — Accounting Schema Enforcement Hotfix (implementata, in attesa di validazione)**.
+Milestone corrente: **M1.9.5 — Step, Timer & Anti-Replay Verification (implementata, in attesa di validazione)**.
 
-M1.9.1, M1.9.2, la linea correttiva fino a **M1.9.2.1.3** e **M1.9.3** sono state validate con verifica completa verde. La baseline ufficiale è PHP 8.4+; il timer visuale usa durate relative server-side più un clock monotono del browser, gli snapshot storici restano coerenti dopo la cancellazione della coppia sorgente e il commit-reveal è coperto da un gate crittografico dedicato. M1.9.4 verifica sessione anonima, pre-emissione sicura del cookie, avvio idempotente della giocata e contabilizzazione virtuale esatta 100/80/20. M1.9.4.1 reimpone a livello SQLite gli oggetti di unicità della contabilizzazione e rende il gate auto-diagnostico rispetto allo schema realmente applicato.
+M1.9.1, M1.9.2, la linea correttiva fino a **M1.9.2.1.3**, **M1.9.3**, **M1.9.4** e **M1.9.4.1** sono state validate con verifica completa verde. La baseline ufficiale è **TwentyChoices M1.9.4.1 su PHP 8.4+**. M1.9.5 verifica ora il confine server-side esatto dei due secondi, refresh e doppia scheda, rotazione dei token, replay idempotente e manipolazioni HTTP; la migration dedicata elimina la precedente tolleranza floating-point SQLite e rende `request_id` univoco nel corretto scope della singola giocata.
 
 Prima di avviare M2.1 è stata pianificata la fase **M1.9 — Verification & Hardening**, composta da 15 milestone bloccanti che verificano l’intero processo pezzo per pezzo. Il piano completo è in `docs/15-verification-hardening-plan.md`.
 
@@ -57,19 +57,19 @@ php -S 127.0.0.1:8000 -t public
 php -S 127.0.0.1:8000 -t public
 ```
 
-Verifica completa M1.9.4.1, rieseguibile anche su una working copy già inizializzata e dopo precedenti esecuzioni PHPUnit:
+Verifica completa M1.9.5, rieseguibile anche su una working copy già inizializzata e dopo precedenti esecuzioni PHPUnit:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.4.1.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.5.ps1
 ```
 
 oppure:
 
 ```bash
-./scripts/verify-m1.9.4.1.sh
+./scripts/verify-m1.9.5.sh
 ```
 
-La verifica controlla il manifest SHA-256 della release, la coerenza della baseline PHP/Composer, la policy anti-clock-skew del timer, il bootstrap completo con `composer check-platform-reqs`, la regressione totale e tutti i gate ereditati fino a M1.9.3. M1.9.4 aggiunge lo scenario transazionale su sessione anonima, avvio idempotente e contabilizzazione 100/80/20, oltre ai test HTTP sul cookie pre-emesso prima del primo POST. M1.9.4.1 sincronizza esplicitamente le migrazioni del database test subito prima del gate, verifica gli oggetti SQLite attesi e ricrea in modo versionato le protezioni duplicate-accounting. Il package audit rigoroso resta un controllo separato del tree pulito usato durante il confezionamento della release. `bin/.phpunit/`, scaricata automaticamente dal Symfony PHPUnit Bridge, è trattata come tooling runtime e non come sorgente della release. Restano disponibili anche gli script dei gate precedenti.
+La verifica controlla il manifest SHA-256 della release, la coerenza della baseline PHP/Composer, la policy anti-clock-skew del timer, il bootstrap completo con `composer check-platform-reqs`, la regressione totale e tutti i gate ereditati fino a M1.9.4.1. M1.9.5 aggiunge il gate transazionale su confine 1.999/2.000 millisecondi, refresh, token rotation, replay, doppia scheda, ownership della play e input client non autorevoli; i test HTTP usano un clock congelato per provare esattamente il confine temporale. Il package audit rigoroso resta un controllo separato del tree pulito usato durante il confezionamento della release. `bin/.phpunit/`, scaricata automaticamente dal Symfony PHPUnit Bridge, è trattata come tooling runtime e non come sorgente della release. Restano disponibili anche gli script dei gate precedenti.
 
 Il bootstrap genera automaticamente un `APP_SECRET` casuale in `.env.local` se non è già presente. Il file è escluso da Git e non viene distribuito nello ZIP. L’area amministrativa è limitata per default a `127.0.0.1` e `::1` tramite `ADMIN_ALLOWED_IPS`.
 
@@ -190,7 +190,7 @@ php tools/domain-tests.php
 php bin/phpunit
 ```
 
-La suite corrente contiene **108 metodi PHPUnit**, pari a **113 casi effettivi** considerando i data provider di `WinningPathTest` e `RoundCommitmentTest`. Il runner indipendente contiene **20 verifiche**. I comandi `app:verification:catalog-round --env=test`, `app:verification:cryptographic-commitment --env=test` e `app:verification:play-start-accounting --env=test` aggiungono scenari transazionali di gate interamente rollbackati.
+La suite corrente contiene **115 metodi PHPUnit**, pari a **120 casi effettivi** considerando i data provider di `WinningPathTest` e `RoundCommitmentTest`. Il runner indipendente contiene **20 verifiche**. I comandi `app:verification:catalog-round --env=test`, `app:verification:cryptographic-commitment --env=test`, `app:verification:play-start-accounting --env=test` e `app:verification:step-timer-anti-replay --env=test` aggiungono scenari transazionali di gate interamente rollbackati.
 
 ## Documentazione
 
@@ -216,6 +216,9 @@ La suite corrente contiene **108 metodi PHPUnit**, pari a **113 casi effettivi**
 - `docs/20-m1.9.2.1.2-phpunit-bridge-runtime-hotfix.md`
 - `docs/21-m1.9.2.1.3-snapshot-reference-detachment-hotfix.md`
 - `docs/22-m1.9.3-cryptographic-commitment-verification.md`
+- `docs/23-m1.9.4-play-start-accounting-verification.md`
+- `docs/24-m1.9.4.1-accounting-schema-enforcement-hotfix.md`
+- `docs/25-m1.9.5-step-timer-anti-replay-verification.md`
 
 
 ## Simulazioni statistiche
