@@ -10,9 +10,8 @@ use App\Game\Application\SubmitChoice;
 use App\Game\Domain\Exception\ChoiceTooEarly;
 use App\Game\Domain\Exception\DomainRuleViolation;
 use App\Player\Application\PlayerSessionRegistry;
-use DateTimeImmutable;
+use App\Player\Http\PlayerCookieFactory;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,8 +19,6 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class PlayController extends AbstractController
 {
-    private const PLAYER_COOKIE = 'twenty_choices_player';
-
     #[Route('/gioca/inizia', name: 'app_play_start', methods: ['POST'])]
     public function start(
         Request $request,
@@ -32,9 +29,8 @@ final class PlayController extends AbstractController
             throw $this->createAccessDeniedException('Token CSRF non valido.');
         }
 
-        $identity = null;
         try {
-            $identity = $sessions->resolve($request->cookies->get(self::PLAYER_COOKIE));
+            $identity = $sessions->requireExisting($request->cookies->get(PlayerCookieFactory::NAME));
             $play = $startPlay->start($identity->id);
             $response = $this->redirectToRoute('app_play_show', [
                 'playPublicCode' => $play->publicCode,
@@ -42,13 +38,6 @@ final class PlayController extends AbstractController
         } catch (DomainRuleViolation $exception) {
             $this->addFlash('error', $exception->getMessage());
             $response = $this->redirectToRoute('app_home');
-        }
-
-        if ($identity?->newlyCreated) {
-            $response->headers->setCookie($this->createPlayerCookie(
-                $identity->rawToken,
-                $request->isSecure(),
-            ));
         }
 
         return $response;
@@ -62,7 +51,7 @@ final class PlayController extends AbstractController
         OpenPlayStep $openStep,
     ): Response {
         try {
-            $identity = $sessions->requireExisting($request->cookies->get(self::PLAYER_COOKIE));
+            $identity = $sessions->requireExisting($request->cookies->get(PlayerCookieFactory::NAME));
             $play = $openStep->open($playPublicCode, $identity->id);
         } catch (DomainRuleViolation $exception) {
             throw $this->createNotFoundException($exception->getMessage(), $exception);
@@ -88,7 +77,7 @@ final class PlayController extends AbstractController
         }
 
         try {
-            $identity = $sessions->requireExisting($request->cookies->get(self::PLAYER_COOKIE));
+            $identity = $sessions->requireExisting($request->cookies->get(PlayerCookieFactory::NAME));
             $elapsed = $request->request->get('clientElapsedMilliseconds');
             $selectedOption = (string) $request->request->get('selectedOptionJs');
             if ($selectedOption === '') {
@@ -111,16 +100,5 @@ final class PlayController extends AbstractController
         return $this->redirectToRoute('app_play_show', [
             'playPublicCode' => $playPublicCode,
         ]);
-    }
-
-    private function createPlayerCookie(string $rawToken, bool $secure): Cookie
-    {
-        return Cookie::create(self::PLAYER_COOKIE)
-            ->withValue($rawToken)
-            ->withExpires(new DateTimeImmutable('+1 year'))
-            ->withPath('/')
-            ->withSecure($secure)
-            ->withHttpOnly(true)
-            ->withSameSite(Cookie::SAMESITE_LAX);
     }
 }

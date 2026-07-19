@@ -169,15 +169,23 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 - [x] Tamper test indipendenti su percorso, nonce, round e question set.
 - [x] Cifratura autenticata contestuale e materiale persistito immutabile.
 - [x] Nessun reveal durante `ACTIVE` in DB, log, endpoint, payload HTTP e DOM.
-- [ ] **Gate:** validazione esplicita con `verify-m1.9.3.ps1/.sh`; ogni manomissione deve essere rilevabile.
+- [x] **Gate:** validazione esplicita con `verify-m1.9.3.ps1/.sh`; ogni manomissione deve essere rilevabile.
 
 ### M1.9.4 — Play Start & Accounting Verification
 
-- [ ] Sessione anonima, cookie e token hashati.
-- [ ] Una sola giocata aperta per sessione/round.
-- [ ] Contabilizzazione virtuale 1,00 = 0,80 + 0,20.
-- [ ] Doppio avvio idempotente.
-- [ ] **Gate:** una partecipazione genera una sola giocata e una sola quota.
+- [x] Sessione anonima pre-emessa sulla Home, cookie sicuro e token persistito solo come hash.
+- [x] Una sola giocata aperta per sessione/round.
+- [x] Contabilizzazione virtuale 1,00 = 0,80 + 0,20 con vincoli DB per play/correlation.
+- [x] Doppio avvio idempotente sulla stessa sessione; POST privo di identità pre-esistente non crea una quota.
+- [ ] **Gate:** validazione esplicita con `verify-m1.9.4.1.ps1/.sh`; una partecipazione genera una sola giocata e una sola quota, con schema SQLite verificato prima dello scenario.
+
+#### M1.9.4.1 — Accounting Schema Enforcement Hotfix
+
+- [x] Nuova migration che ricrea i tre indici unici STANDARD e il trigger di binding/duplicazione.
+- [x] Trigger rafforzato: seconda componente dello stesso tipo sulla stessa play sempre respinta.
+- [x] Preflight del gate su `sqlite_master`.
+- [x] Migrazioni test sincronizzate immediatamente prima del gate.
+- [ ] **Gate:** suite completa + `Duplicate accounting protection` verde per entry, jackpot e organizer.
 
 ### M1.9.5 — Step, Timer & Anti-Replay Verification
 

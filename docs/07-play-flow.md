@@ -6,7 +6,7 @@ La milestone M1.3 introduce la progressione temporizzata; dalla M1.4 la ventesim
 
 ## Sessione anonima
 
-Al primo avvio di una giocata il server genera un token casuale da 256 bit. Il browser lo conserva in un cookie:
+Alla prima visita della Home il server risolve o genera un token anonimo casuale da 256 bit **prima** che l’utente possa inviare il comando di avvio. Il browser lo conserva in un cookie:
 
 - `HttpOnly`;
 - `SameSite=Lax`;
@@ -27,7 +27,7 @@ L'avvio è atomico e registra:
 - incremento del montepremio di 80 centesimi;
 - evento di audit `PLAY_STARTED`.
 
-Una sessione può avere una sola giocata aperta nello stesso round. Un secondo comando di avvio riprende la giocata esistente senza contabilizzare una nuova quota.
+Il `POST /gioca/inizia` richiede una sessione anonima già esistente: non crea una nuova identità durante l’addebito. Una sessione può avere una sola giocata aperta nello stesso round. Un secondo comando di avvio riprende la giocata esistente senza contabilizzare una nuova quota. Questa pre-emissione del cookie chiude anche la finestra in cui due POST quasi simultanei, partiti prima della prima risposta, avrebbero potuto ottenere due identità differenti.
 
 ## Apertura dello step
 

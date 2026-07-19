@@ -69,7 +69,7 @@ oppure:
 ./scripts/verify-m1.9.2.1.3.sh
 ```
 
-Lo script verifica prima la coerenza della baseline PHP 8.4/Composer e la policy del timer monotono, poi esegue bootstrap completo, incluse le migrazioni fino a `Version20260719000200`, suite regressiva e gate transazionale `app:verification:catalog-round --env=test`. La hotfix rende atomico il distacco di `choice_pair_id` dagli snapshot quando una coppia regolare viene eliminata. Lo scenario catalogo/round viene sempre rollbackato e non lascia dati di prova persistiti.
+Lo script verifica prima la coerenza della baseline PHP 8.4/Composer e la policy del timer monotono, poi esegue bootstrap completo, incluse tutte le migrazioni presenti nella release corrente, suite regressiva e gate transazionale `app:verification:catalog-round --env=test`. La hotfix rende atomico il distacco di `choice_pair_id` dagli snapshot quando una coppia regolare viene eliminata. Lo scenario catalogo/round viene sempre rollbackato e non lascia dati di prova persistiti.
 
 Dettagli e checklist: `docs/17-m1.9.2-catalog-round-verification.md` e `docs/18-m1.9.2.1-runtime-timing-hardening.md`.
 
@@ -91,6 +91,24 @@ oppure:
 Lo script riesegue integralmente la baseline precedente e poi `app:verification:cryptographic-commitment --env=test`. Il gate apre un round soltanto dentro una transazione di verifica, ricostruisce il commitment, prova le quattro manomissioni obbligatorie, controlla autenticazione/context binding dei ciphertext, immutabilità SQLite e non-disclosure dei segreti durante `ACTIVE`; infine esegue rollback e ricontrolla il release manifest.
 
 Dettagli: `docs/22-m1.9.3-cryptographic-commitment-verification.md`.
+
+## Gate M1.9.4 — Play Start & Accounting Verification
+
+Dopo la baseline validata M1.9.3 usare:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.4.1.ps1
+```
+
+oppure:
+
+```bash
+./scripts/verify-m1.9.4.1.sh
+```
+
+Lo script riesegue tutta la baseline M1.9.3 e poi `app:verification:play-start-accounting --env=test`. Il gate verifica token anonimi hashati, codici play opachi, idempotenza dello start, contabilizzazione 100/80/20, riconciliazione jackpot, protezioni anti-duplicato e rollback atomico sotto fault injection. I test HTTP verificano anche la pre-emissione del cookie sulla Home e il comportamento fail-closed se il POST non possiede una sessione anonima già valida.
+
+Dettagli: `docs/23-m1.9.4-play-start-accounting-verification.md`.
 
 ### Esecuzione diretta PHPUnit
 

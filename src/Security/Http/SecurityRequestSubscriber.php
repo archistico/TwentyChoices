@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security\Http;
 
+use App\Player\Http\PlayerCookieFactory;
 use App\Security\Admin\AdminAccessPolicy;
 use App\Security\Admin\AdminAuthentication;
 use App\Security\Application\RequestRateLimiter;
@@ -24,8 +25,6 @@ use Twig\Environment;
 
 final readonly class SecurityRequestSubscriber implements EventSubscriberInterface
 {
-    private const PLAYER_COOKIE = 'twenty_choices_player';
-
     public function __construct(
         private RequestRateLimiter $rateLimiter,
         private SecurityEventLogger $securityLog,
@@ -220,7 +219,7 @@ final readonly class SecurityRequestSubscriber implements EventSubscriberInterfa
     {
         $route = $request->attributes->getString('_route');
         $ip = $request->getClientIp() ?? 'unknown';
-        $cookie = (string) $request->cookies->get(self::PLAYER_COOKIE, 'anonymous');
+        $cookie = (string) $request->cookies->get(PlayerCookieFactory::NAME, 'anonymous');
 
         return match ($route) {
             'app_play_start' => [

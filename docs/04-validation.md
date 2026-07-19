@@ -413,6 +413,8 @@ Il gate corrente è `scripts/verify-m1.9.2.1.3.ps1/.sh` e riesegue integralmente
 
 Baseline: **M1.9.2.1.3 validata integralmente dall'utente**.
 
+Stato: **M1.9.3 validata integralmente dall'utente**.
+
 Rafforzamenti introdotti:
 
 - nuovo `CryptographicCommitmentGateVerifier` transazionale;
@@ -435,3 +437,46 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.3.ps1
 
 Dettagli: `docs/22-m1.9.3-cryptographic-commitment-verification.md`.
 
+
+
+## M1.9.4 — Play Start & Accounting Verification
+
+Baseline: **M1.9.3 validata integralmente dall'utente**.
+
+Verifiche introdotte:
+
+- sessione anonima pre-emessa su `GET /` prima del primo POST di avvio;
+- cookie `HttpOnly`, `SameSite=Lax`, path `/`, `Secure` su HTTPS;
+- persistenza esclusiva di SHA-256 del token anonimo;
+- doppio start sulla stessa sessione idempotente e senza seconda quota;
+- codice play casuale/opaco distinto dal progressivo di partecipazione;
+- ledger STANDARD esatto `PLAYER_ENTRY=100`, `JACKPOT_CONTRIBUTION=80`, `ORGANIZER_SHARE=20`;
+- correlation id comune alle tre righe e riconciliazione del contributo round;
+- indici unici per impedire una seconda contabilizzazione standard sulla stessa play;
+- trigger di binding tra play STANDARD, round e correlation id;
+- gate transazionale `app:verification:play-start-accounting --env=test`;
+- test HTTP E2E su cookie, hashing, POST senza identità pre-emessa fail-closed, doppio POST e resume della stessa giocata;
+- fault injection durante la quota STANDARD con rollback atomico di play, ledger e contributo jackpot.
+
+Suite predisposta: **108 metodi PHPUnit / 113 casi effettivi**, più **20 verifiche indipendenti**.
+
+
+## M1.9.4.1 — Accounting Schema Enforcement Hotfix
+
+La prima esecuzione utente di `app:verification:play-start-accounting --env=test` ha prodotto `Duplicate accounting protection: entry=accepted, jackpot=accepted, organizer=accepted`, pur con suite PHPUnit verde. La hotfix tratta questa divergenza come difetto del gate/schema, non come condizione tollerabile.
+
+Correzioni:
+
+- migration `Version20260719000400` che ricrea gli indici `uniq_standard_*_per_play`;
+- trigger `trg_ledger_standard_entry_play_binding` rafforzato con controllo esplicito del duplicato per `(play_id, entry_type)`;
+- controllo preventivo degli oggetti in `sqlite_master`;
+- `doctrine:migrations:migrate --env=test` eseguito immediatamente prima del gate M1.9.4;
+- test dedicato alla presenza degli oggetti di hardening.
+
+Gate:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.4.1.ps1
+```
+
+Suite predisposta dopo la hotfix: **109 metodi PHPUnit / 114 casi effettivi**, più **20 verifiche indipendenti**.
