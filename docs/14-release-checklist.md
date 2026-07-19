@@ -63,3 +63,13 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.5.ps1
 ```
 
 Il comando deve completare tutta la baseline validata M1.9.4.1, la suite completa e il gate `app:verification:step-timer-anti-replay --env=test` senza errori. Il report deve mostrare verdi il confine 1.999/2.000 millisecondi, la rotazione token, il replay idempotente e l'ownership della play.
+
+## Gate M1.9.6
+
+Prima di promuovere M1.9.6 eseguire da una working copy valida:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.6.ps1
+```
+
+Il comando deve completare tutta la baseline validata M1.9.5, la suite completa e il gate `app:verification:full-losing-journey --env=test` senza errori. Il report deve mostrare verdi progressione 1/20 → 20/20, terminale `COMPLETED_LOST`, ricevuta senza reveal, round ancora `ACTIVE` e nuova partecipazione nello stesso round.

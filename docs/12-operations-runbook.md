@@ -292,3 +292,21 @@ php bin/console app:admin:create admin --role=SUPER_ADMIN
 ```
 
 Creare account distinti per persona e assegnare il ruolo minimo necessario. Il database impedisce la rimozione dell'ultimo `SUPER_ADMIN` attivo. Un cambio password, ruolo o stato invalida la sessione precedente tramite `auth_version`.
+
+## Gate M1.9.6 — Full Losing Journey Verification
+
+Dopo la baseline validata M1.9.5 usare:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.6.ps1
+```
+
+oppure:
+
+```bash
+./scripts/verify-m1.9.6.sh
+```
+
+Il gate riesegue integralmente M1.9.5 e poi `app:verification:full-losing-journey --env=test`. Vengono provati il percorso completo 1/20 → 20/20 perdente, lo stato `COMPLETED_LOST`, i 20 step persistiti, la ricevuta prima del reveal, il round ancora `ACTIVE` e la possibilità di iniziare una nuova partecipazione nello stesso round.
+
+Dettagli: `docs/26-m1.9.6-full-losing-journey-verification.md`.

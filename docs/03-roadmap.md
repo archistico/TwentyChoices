@@ -193,14 +193,15 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 - [x] Refresh, token rotation, replay idempotente e doppia scheda.
 - [x] Tentativi di salto step e manipolazione HTTP con campi non autorevoli.
 - [x] Idempotency key `request_id` scoped per giocata.
-- [ ] **Gate:** validazione esplicita con `verify-m1.9.5.ps1/.sh`; il client non controlla la macchina a stati.
+- [x] **Gate:** validazione esplicita con `verify-m1.9.5.ps1/.sh`; il client non controlla la macchina a stati.
 
 ### M1.9.6 — Full Losing Journey Verification
 
-- [ ] Percorso completo 1/20 → 20/20 perdente.
-- [ ] `COMPLETED_LOST`, round ancora `ACTIVE`, ricevuta valida.
-- [ ] Nessun reveal anticipato.
-- [ ] **Gate:** una perdita chiude solo la giocata.
+- [x] Percorso completo 1/20 → 20/20 perdente implementato nel gate transazionale e nell'E2E browser.
+- [x] `COMPLETED_LOST`, round ancora `ACTIVE`, 20 step persistiti e ricevuta valida.
+- [x] Nessun reveal anticipato; nessun winner, payout, credito o nuovo round causato dalla perdita.
+- [x] Nuova partecipazione della stessa sessione consentita nello stesso round.
+- [ ] **Gate:** validazione esplicita con `verify-m1.9.6.ps1/.sh`; una perdita chiude solo la giocata.
 
 ### M1.9.7 — Winning Settlement Verification
 

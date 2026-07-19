@@ -717,3 +717,11 @@ Il gate installabile usa un release manifest SHA-256 per distinguere i sorgenti 
 ## Correzione M1.9.2.1.3 — snapshot live-reference detachment
 
 La suite completa ha rilevato che `ON DELETE SET NULL` non è sufficiente come unica garanzia perché `PRAGMA foreign_keys` è connection-local. La migration `Version20260719000200` aggiunge un trigger SQLite atomico che stacca `round_question.choice_pair_id` prima della cancellazione di una coppia regolare, preservando `choice_pair_source_id_snapshot` e gli altri dati immutabili.
+
+## Stato implementazione M1.9.6 — Full Losing Journey Verification
+
+Baseline di partenza: **M1.9.5 validata integralmente dall'utente**.
+
+M1.9.6 aggiunge un gate transazionale e un E2E browser completi per il percorso perdente. Il percorso di prova diverge dal segreto fin dalla prima scelta ma deve comunque raggiungere 20/20, dimostrando che non esiste terminazione anticipata. Dopo la perdita vengono verificati `COMPLETED_LOST`, 20 step persistiti, ricevuta integra, round ancora `ACTIVE`, assenza di winner/payout/crediti/nuovo round/reveal e possibilità di una nuova partecipazione nello stesso round.
+
+Gate: `scripts/verify-m1.9.6.ps1/.sh`.

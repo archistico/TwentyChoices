@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Command;
+
+use App\Verification\Application\FullLosingJourneyGateVerifier;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+
+#[AsCommand(
+    name: 'app:verification:full-losing-journey',
+    description: 'Esegue il gate transazionale M1.9.6 sul percorso completo perdente e sulla continuità del round.',
+)]
+final class FullLosingJourneyVerifyCommand extends Command
+{
+    public function __construct(private readonly FullLosingJourneyGateVerifier $verifier)
+    {
+        parent::__construct();
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $io = new SymfonyStyle($input, $output);
+        $report = $this->verifier->verify();
+        $rows = [];
+
+        foreach ($report['checks'] as $check) {
+            $rows[] = [strtoupper($check['status']), $check['name'], $check['value'], $check['detail']];
+        }
+
+        $io->table(['Stato', 'Controllo', 'Valore', 'Dettaglio'], $rows);
+
+        if ($report['status'] === 'error') {
+            $io->error('Verifica M1.9.6 full losing journey fallita. Tutte le mutazioni dello scenario sono state annullate.');
+
+            return Command::FAILURE;
+        }
+
+        $io->success('Verifica M1.9.6 completata: una perdita chiude solo la singola giocata, emette una ricevuta senza reveal e lascia il round disponibile per una nuova partecipazione. Scenario rollbackato.');
+
+        return Command::SUCCESS;
+    }
+}

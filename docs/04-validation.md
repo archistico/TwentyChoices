@@ -509,3 +509,31 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.5.ps1
 ```
 
 Dettagli: `docs/25-m1.9.5-step-timer-anti-replay-verification.md`.
+
+
+## M1.9.6 — Full Losing Journey Verification
+
+Baseline: **M1.9.5 validata integralmente dall'utente**.
+
+Verifiche introdotte:
+
+- nuovo `FullLosingJourneyGateVerifier` transazionale;
+- nuovo comando `app:verification:full-losing-journey --env=test`;
+- percorso perdente che diverge dalla strada segreta già alla prima scelta ma deve comunque arrivare a 20/20;
+- `COMPLETED_LOST`, `completed_at`, 20 step risposti distinti e percorso persistito di 20 bit;
+- round ancora `ACTIVE`, senza winner, freeze, payout, crediti, nuovo round o reveal;
+- una sola ricevuta `LOST`, integra e coerente prima della pubblicazione del segreto;
+- riapertura della play terminale senza creazione di nuovi step/challenge;
+- nuova partecipazione STANDARD della stessa sessione nello stesso round;
+- nuovo E2E browser completo con ricevuta pubblica e pulsante `Riprova`;
+- CI estesa con il gate M1.9.6.
+
+Suite predisposta: **117 metodi PHPUnit / 122 casi effettivi**, più **20 verifiche indipendenti**.
+
+Gate operativo:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.6.ps1
+```
+
+Dettagli: `docs/26-m1.9.6-full-losing-journey-verification.md`.
