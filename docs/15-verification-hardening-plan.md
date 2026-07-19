@@ -1,6 +1,6 @@
 # M1.9 — Verification & Hardening Plan
 
-> Stato corrente: **M1.9.1 implementata e in attesa di validazione del gate su estrazione pulita**. Evidenze e checklist operative: `docs/16-m1.9.1-environment-database-verification.md`.
+> Stato corrente: **M1.9.1 validata; M1.9.2 e M1.9.2.1 implementate; M1.9.2.1.3 completa le hotfix emerse dalla prima esecuzione reale del gate, includendo il distacco atomico del riferimento vivo degli snapshot, ed è in attesa di validazione del gate combinato**. Evidenze: `docs/17-m1.9.2-catalog-round-verification.md` e `docs/18-m1.9.2.1-runtime-timing-hardening.md`.
 
 ## Obiettivo
 
@@ -125,6 +125,36 @@ Controllare:
 ### Gate
 
 **Catalogo modificabile senza effetti retroattivi e apertura di un solo round globale completo, coerente e immutabile.**
+
+### Implementazione M1.9.2
+
+La verifica è automatizzata anche dal comando transazionale `app:verification:catalog-round`, che esercita CRUD, limite delle 19 coppie, protezione della porta finale, apertura del round, immutabilità degli snapshot, eliminazione di una coppia già snapshot-tata e rifiuto del secondo round `ACTIVE`. Tutte le mutazioni dello scenario vengono rollbackate.
+
+Dettagli, bug corretti e checklist: `docs/17-m1.9.2-catalog-round-verification.md`.
+
+---
+
+## M1.9.2.1 — Runtime Compatibility & Monotonic Timing Hardening
+
+### Scopo
+
+Chiudere due incoerenze individuate dall'audit prima di proseguire: baseline PHP dichiarata non coerente con il lock Composer e countdown browser dipendente dal clock civile del client.
+
+### Correzioni obbligatorie
+
+- PHP 8.4 come baseline ufficiale coerente in `composer.json`, lock, README, bootstrap, preflight e CI;
+- `config.platform.php = 8.4.0` e relativo `platform-overrides` nel lock per mantenere la risoluzione dipendenze compatibile con la baseline minima;
+- `composer check-platform-reqs` nel bootstrap e in CI;
+- controllo automatico di coerenza della baseline distribuita e freschezza del content hash del lock;
+- eliminazione degli epoch assoluti server dal DOM del gioco;
+- countdown basato su millisecondi relativi server + `performance.now()` monotono;
+- test anti-regressione su refresh, scadenza timer e assenza di `Date.now()` nel flusso di scelta.
+
+### Gate
+
+**Installazione pulita su PHP 8.4+, platform requirements Composer verdi, suite completa verde, gate M1.9.2 verde e timer client indipendente dall'orologio civile locale.**
+
+Dettagli: `docs/18-m1.9.2.1-runtime-timing-hardening.md`.
 
 ---
 
@@ -667,3 +697,17 @@ La fase deve essere eseguita nell'ordine seguente:
 15. M1.9.15 — Final Full-Journey Acceptance
 
 Ogni milestone è bloccante per la successiva.
+
+## Correzione M1.9.2.1.1 — working-copy verification
+
+Il gate installabile usa un release manifest SHA-256 per distinguere i sorgenti distribuiti dagli artefatti runtime generati dopo il bootstrap. `tools/package-audit.php` resta rigoroso e dedicato al tree pulito in fase di confezionamento.
+
+
+## Correzione M1.9.2.1.2 — Symfony PHPUnit Bridge generated tooling
+
+`bin/.phpunit/` è una directory runtime creata automaticamente dal Symfony PHPUnit Bridge dopo l'installazione. Non fa parte dei sorgenti di release: il manifest checker la ignora nelle working copy inizializzate, mentre package audit e manifest continuano a vietarne la distribuzione nello ZIP.
+
+
+## Correzione M1.9.2.1.3 — snapshot live-reference detachment
+
+La suite completa ha rilevato che `ON DELETE SET NULL` non è sufficiente come unica garanzia perché `PRAGMA foreign_keys` è connection-local. La migration `Version20260719000200` aggiunge un trigger SQLite atomico che stacca `round_question.choice_pair_id` prima della cancellazione di una coppia regolare, preservando `choice_pair_source_id_snapshot` e gli altri dati immutabili.

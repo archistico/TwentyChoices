@@ -78,6 +78,8 @@ final readonly class OpenPlayStep
                     requestId: null,
                     shownAt: null,
                     availableAt: null,
+                    waitRemainingMilliseconds: null,
+                    elapsedSinceShownMilliseconds: null,
                     verificationCode: $verificationCode,
                 );
             }
@@ -168,6 +170,10 @@ SQL, [
                 'shownAt' => $shownAt->format(DATE_ATOM),
                 'availableAt' => $availableAt->format(DATE_ATOM),
             ], (string) $play['round_id'], (string) $play['id'], $requestId);
+            $renderNow = $this->clock->now();
+            $waitRemainingMilliseconds = self::millisecondsBetween($renderNow, $availableAt);
+            $elapsedSinceShownMilliseconds = self::millisecondsBetween($shownAt, $renderNow);
+
             $this->connection->commit();
 
             $optionA = (string) $question['option_a_text_snapshot'];
@@ -195,6 +201,8 @@ SQL, [
                 requestId: $requestId,
                 shownAt: $shownAt,
                 availableAt: $availableAt,
+                waitRemainingMilliseconds: $waitRemainingMilliseconds,
+                elapsedSinceShownMilliseconds: $elapsedSinceShownMilliseconds,
                 verificationCode: null,
             );
         } catch (Throwable $exception) {
@@ -250,6 +258,16 @@ SQL, [
     private static function formatDate(DateTimeImmutable $date): string
     {
         return $date->format('Y-m-d H:i:s.u');
+    }
+
+    private static function millisecondsBetween(DateTimeImmutable $from, DateTimeImmutable $to): int
+    {
+        return max(0, self::epochMilliseconds($to) - self::epochMilliseconds($from));
+    }
+
+    private static function epochMilliseconds(DateTimeImmutable $date): int
+    {
+        return ((int) $date->format('U')) * 1_000 + intdiv((int) $date->format('u'), 1_000);
     }
 
     private static function parseDate(string $value): DateTimeImmutable

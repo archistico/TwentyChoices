@@ -6,7 +6,7 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": ">=8.3",
+        "php": ">=8.4",
         "ext-ctype": "*",
         "ext-iconv": "*",
         "ext-pdo": "*",
@@ -50,6 +50,9 @@
             "symfony/runtime": true
         },
         "optimize-autoloader": true,
+        "platform": {
+            "php": "8.4.0"
+        },
         "sort-packages": true
     },
     "scripts": {

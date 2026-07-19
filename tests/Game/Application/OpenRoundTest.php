@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Game\Application;
 
+use App\Catalog\Application\ChoicePairCatalog;
 use App\Game\Application\OpenRound;
 use App\Game\Domain\Exception\DomainRuleViolation;
 use App\Game\Domain\Security\RoundSecretCipher;
@@ -50,6 +51,20 @@ final class OpenRoundTest extends KernelTestCase
             'SELECT COUNT(*) FROM round_question WHERE round_id = :id',
             ['id' => $opened->id],
         ));
+        self::assertSame(19, (int) $this->connection->fetchOne(<<<'SQL'
+SELECT COUNT(DISTINCT choice_pair_source_id_snapshot)
+FROM round_question
+WHERE round_id = :id
+  AND step_number BETWEEN 1 AND 19
+  AND pair_type_snapshot = 'REGULAR'
+SQL, ['id' => $opened->id]));
+        self::assertSame(1, (int) $this->connection->fetchOne(<<<'SQL'
+SELECT COUNT(*)
+FROM round_question
+WHERE round_id = :id
+  AND step_number = 20
+  AND pair_type_snapshot = 'FINAL_DOOR'
+SQL, ['id' => $opened->id]));
         self::assertSame(1, (int) $this->connection->fetchOne(<<<'SQL'
 SELECT COUNT(*)
 FROM ledger_entry
@@ -126,6 +141,110 @@ SQL, ['id' => $opened->id]));
             "UPDATE ledger_entry SET amount_cents = 1 WHERE round_id = :id AND entry_type = 'BANK_SEED'",
             ['id' => $opened->id],
         );
+    }
+
+    public function testCatalogEditAndDeleteCannotRetroactivelyChangeARoundSnapshot(): void
+    {
+        $opened = self::getContainer()->get(OpenRound::class)->open();
+        $catalog = self::getContainer()->get(ChoicePairCatalog::class);
+        $snapshot = $this->connection->fetchAssociative(<<<'SQL'
+SELECT *
+FROM round_question
+WHERE round_id = :roundId
+  AND step_number = 1
+SQL, ['roundId' => $opened->id]);
+        self::assertIsArray($snapshot);
+
+        $sourceId = (string) $snapshot['choice_pair_source_id_snapshot'];
+        self::assertSame($sourceId, (string) $snapshot['choice_pair_id']);
+        $questionSetHash = (string) $this->connection->fetchOne(
+            'SELECT question_set_hash FROM game_round WHERE id = :id',
+            ['id' => $opened->id],
+        );
+        $original = $this->immutableSnapshotData($snapshot);
+        $source = $catalog->get($sourceId);
+
+        $catalog->update(
+            $sourceId,
+            $source->code().'-edited',
+            'Test modificato A',
+            'Test modificato B',
+            'Categoria modificata',
+            $source->sortOrder() + 1,
+        );
+
+        $afterEdit = $this->connection->fetchAssociative(
+            'SELECT * FROM round_question WHERE id = :id',
+            ['id' => $snapshot['id']],
+        );
+        self::assertIsArray($afterEdit);
+        self::assertSame($original, $this->immutableSnapshotData($afterEdit));
+        self::assertSame($questionSetHash, (string) $this->connection->fetchOne(
+            'SELECT question_set_hash FROM game_round WHERE id = :id',
+            ['id' => $opened->id],
+        ));
+
+        $catalog->delete($sourceId);
+
+        $afterDelete = $this->connection->fetchAssociative(
+            'SELECT * FROM round_question WHERE id = :id',
+            ['id' => $snapshot['id']],
+        );
+        self::assertIsArray($afterDelete);
+        self::assertNull($afterDelete['choice_pair_id']);
+        self::assertSame($sourceId, $afterDelete['choice_pair_source_id_snapshot']);
+        self::assertSame($original, $this->immutableSnapshotData($afterDelete));
+        self::assertSame($questionSetHash, (string) $this->connection->fetchOne(
+            'SELECT question_set_hash FROM game_round WHERE id = :id',
+            ['id' => $opened->id],
+        ));
+    }
+
+    public function testAForcedActivationFailureRollsBackTheWholeRoundOpening(): void
+    {
+        $roundsBefore = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM game_round');
+        $questionsBefore = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM round_question');
+        $ledgerBefore = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM ledger_entry');
+        $this->connection->executeStatement(<<<'SQL'
+CREATE TEMP TRIGGER m192_force_round_activation_failure
+BEFORE UPDATE OF status ON game_round
+WHEN NEW.status = 'ACTIVE'
+BEGIN
+    SELECT RAISE(ABORT, 'M1.9.2 forced activation failure');
+END
+SQL);
+
+        try {
+            self::getContainer()->get(OpenRound::class)->open();
+            self::fail('The forced activation failure should abort round opening.');
+        } catch (Exception $exception) {
+            self::assertStringContainsString('M1.9.2 forced activation failure', $exception->getMessage());
+        } finally {
+            $this->connection->executeStatement('DROP TRIGGER IF EXISTS m192_force_round_activation_failure');
+        }
+
+        self::assertSame($roundsBefore, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM game_round'));
+        self::assertSame($questionsBefore, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM round_question'));
+        self::assertSame($ledgerBefore, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM ledger_entry'));
+        self::assertSame(0, (int) $this->connection->fetchOne("SELECT COUNT(*) FROM game_round WHERE status = 'PREPARING'"));
+    }
+
+    /** @param array<string,mixed> $row
+     *  @return array<string,string>
+     */
+    private function immutableSnapshotData(array $row): array
+    {
+        return [
+            'sourceId' => (string) $row['choice_pair_source_id_snapshot'],
+            'step' => (string) $row['step_number'],
+            'optionA' => (string) $row['option_a_text_snapshot'],
+            'optionB' => (string) $row['option_b_text_snapshot'],
+            'optionAImage' => (string) ($row['option_a_image_snapshot'] ?? ''),
+            'optionBImage' => (string) ($row['option_b_image_snapshot'] ?? ''),
+            'code' => (string) $row['choice_pair_code_snapshot'],
+            'category' => (string) $row['category_snapshot'],
+            'type' => (string) $row['pair_type_snapshot'],
+        ];
     }
 
     private static function blobToString(mixed $value): string

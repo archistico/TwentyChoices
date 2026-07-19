@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__.'/RuntimeBaselinePolicy.php';
+
 final class BootstrapPreflight
 {
     /** @return list<array{name:string,status:string,value:string,detail:string}> */
@@ -11,9 +13,9 @@ final class BootstrapPreflight
 
         $checks[] = $this->check(
             'PHP version',
-            version_compare(PHP_VERSION, '8.3.0', '>='),
+            RuntimeBaselinePolicy::supportsPhpVersion(PHP_VERSION),
             PHP_VERSION,
-            'TwentyChoices richiede PHP 8.3 o superiore.',
+            'TwentyChoices richiede PHP '.RuntimeBaselinePolicy::MINIMUM_PHP_VERSION.' o superiore.',
         );
 
         foreach (['ctype', 'iconv', 'PDO', 'pdo_sqlite'] as $extension) {

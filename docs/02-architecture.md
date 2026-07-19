@@ -31,7 +31,7 @@ Il catalogo è modificabile, mentre il set di domande assegnato a un round è im
 - 19 snapshot di coppie `REGULAR` attive;
 - 1 snapshot `FINAL_DOOR` allo step 20.
 
-`QuestionSetSnapshot` verifica ordine, unicità e completezza, poi calcola un hash SHA-256 della rappresentazione canonica. `DoctrineDbalQuestionSetSnapshotStore` consente una sola scrittura per round e soltanto nello stato `PREPARING`.
+`QuestionSetSnapshot` verifica ordine, unicità e completezza, poi calcola un hash SHA-256 della rappresentazione canonica. `DoctrineDbalQuestionSetSnapshotStore` consente una sola scrittura per round e soltanto nello stato `PREPARING`. L’identità sorgente canonica è persistita separatamente dal riferimento vivo al catalogo: l’eliminazione successiva di una coppia può azzerare soltanto il riferimento FK, non l’identità o i contenuti inclusi nello snapshot/hash.
 
 ## Commitment
 
@@ -62,7 +62,7 @@ SQLite è adatto al prototipo. Le invarianti essenziali vengono replicate con in
 - porta finale sempre attiva e di sistema;
 - porta finale non eliminabile;
 - tipo corretto rispetto alla posizione dello snapshot;
-- snapshot non aggiornabili;
+- snapshot non aggiornabili, salvo la sola nullificazione del riferimento vivo `choice_pair_id` quando la coppia sorgente viene eliminata; l’identità `choice_pair_source_id_snapshot` resta immutabile;
 - materiale crittografico del round immutabile;
 - ledger append-only e un solo seed per round;
 - attivazione soltanto dopo snapshot e seed completi.

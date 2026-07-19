@@ -45,6 +45,7 @@ final readonly class DoctrineDbalQuestionSetSnapshotStore implements QuestionSet
                 'id' => (string) new Ulid(),
                 'round_id' => $roundId,
                 'choice_pair_id' => $question->choicePairId,
+                'choice_pair_source_id_snapshot' => $question->choicePairId,
                 'step_number' => $question->stepNumber,
                 'option_a_text_snapshot' => $question->optionAText,
                 'option_b_text_snapshot' => $question->optionBText,

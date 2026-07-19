@@ -93,9 +93,14 @@ final class PlayFlowTest extends KernelTestCase
     {
         [$sessionId, $play] = $this->startPlay();
         $first = self::getContainer()->get(OpenPlayStep::class)->open($play->publicCode, $sessionId);
+        self::assertSame(2_000, $first->waitRemainingMilliseconds);
+        self::assertSame(0, $first->elapsedSinceShownMilliseconds);
+
         $this->clock->advance('+1 second');
         $refreshed = self::getContainer()->get(OpenPlayStep::class)->open($play->publicCode, $sessionId);
 
+        self::assertSame(1_000, $refreshed->waitRemainingMilliseconds);
+        self::assertSame(1_000, $refreshed->elapsedSinceShownMilliseconds);
         self::assertEquals($first->shownAt, $refreshed->shownAt);
         self::assertEquals($first->availableAt, $refreshed->availableAt);
         self::assertNotSame($first->challengeToken, $refreshed->challengeToken);
@@ -110,6 +115,19 @@ final class PlayFlowTest extends KernelTestCase
             (string) Uuid::v7(),
             2_000,
         );
+    }
+
+
+    public function testRelativeBrowserTimingIsClampedAfterTheServerWaitHasExpired(): void
+    {
+        [$sessionId, $play] = $this->startPlay();
+        self::getContainer()->get(OpenPlayStep::class)->open($play->publicCode, $sessionId);
+
+        $this->clock->advance('+3 seconds');
+        $refreshed = self::getContainer()->get(OpenPlayStep::class)->open($play->publicCode, $sessionId);
+
+        self::assertSame(0, $refreshed->waitRemainingMilliseconds);
+        self::assertSame(3_000, $refreshed->elapsedSinceShownMilliseconds);
     }
 
     public function testAValidChoiceAdvancesExactlyOneStepAndReplayIsIdempotent(): void

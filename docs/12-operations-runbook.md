@@ -55,6 +55,24 @@ php bin/console app:installation:verify
 
 Dettagli e checklist: `docs/16-m1.9.1-environment-database-verification.md`.
 
+## Gate combinato M1.9.2 + M1.9.2.1 + hotfix M1.9.2.1.3
+
+Usare il gate correttivo più recente; resta rieseguibile anche su una working copy già inizializzata e dopo precedenti esecuzioni PHPUnit:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.2.1.3.ps1
+```
+
+oppure:
+
+```bash
+./scripts/verify-m1.9.2.1.3.sh
+```
+
+Lo script verifica prima la coerenza della baseline PHP 8.4/Composer e la policy del timer monotono, poi esegue bootstrap completo, incluse le migrazioni fino a `Version20260719000200`, suite regressiva e gate transazionale `app:verification:catalog-round --env=test`. La hotfix rende atomico il distacco di `choice_pair_id` dagli snapshot quando una coppia regolare viene eliminata. Lo scenario catalogo/round viene sempre rollbackato e non lascia dati di prova persistiti.
+
+Dettagli e checklist: `docs/17-m1.9.2-catalog-round-verification.md` e `docs/18-m1.9.2.1-runtime-timing-hardening.md`.
+
 ### Esecuzione diretta PHPUnit
 
 Anche l'esecuzione diretta è deterministica:

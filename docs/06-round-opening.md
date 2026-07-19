@@ -76,6 +76,8 @@ Un indice parziale impedisce due seed nello stesso round. Trigger SQLite impedis
 
 ## Vincoli SQLite aggiunti
 
+M1.9.2 separa l'identità sorgente immutabile (`choice_pair_source_id_snapshot`) dal riferimento vivo opzionale `choice_pair_id`. Questo consente di eliminare in seguito una coppia regolare dal catalogo senza modificare il materiale canonico del round già aperto.
+
 - un solo `BANK_SEED` per round;
 - materiale crittografico immutabile;
 - codice pubblico e jackpot iniziale immutabili;

@@ -10,12 +10,16 @@
     const status = form.querySelector('[data-choice-status]');
     const elapsedInput = form.querySelector('[data-client-elapsed]');
     const selectedOptionInput = form.querySelector('[data-selected-option]');
-    const shownAt = Number(form.dataset.shownAt);
-    const availableAt = Number(form.dataset.availableAt);
+    const waitRemainingAtRender = Math.max(0, Number(form.dataset.waitRemainingMs) || 0);
+    const elapsedAtRender = Math.max(0, Number(form.dataset.elapsedAtRenderMs) || 0);
+    const monotonicStartedAt = window.performance.now();
     let enabled = false;
 
+    const monotonicElapsed = () => Math.max(0, window.performance.now() - monotonicStartedAt);
+    const waitRemaining = () => Math.max(0, waitRemainingAtRender - monotonicElapsed());
+
     const update = () => {
-        const remaining = Math.max(0, availableAt - Date.now());
+        const remaining = waitRemaining();
         if (remaining === 0) {
             enabled = true;
             buttons.forEach(button => { button.disabled = false; });
@@ -29,7 +33,7 @@
     };
 
     form.addEventListener('submit', event => {
-        if (!enabled || Date.now() < availableAt) {
+        if (!enabled || waitRemaining() > 0) {
             event.preventDefault();
             update();
             return;
@@ -41,7 +45,7 @@
         }
 
         selectedOptionInput.value = event.submitter.value;
-        elapsedInput.value = String(Math.max(0, Date.now() - shownAt));
+        elapsedInput.value = String(Math.round(elapsedAtRender + monotonicElapsed()));
         buttons.forEach(button => { button.disabled = true; });
         status.textContent = 'Scelta in verifica…';
     });

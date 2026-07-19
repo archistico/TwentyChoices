@@ -284,7 +284,7 @@ Prima milestone della fase Verification & Hardening, applicata alla baseline M1.
 
 Rafforzamenti introdotti:
 
-- preflight condiviso `tools/bootstrap-preflight.php` per PHP >= 8.3, estensioni obbligatorie, PDO SQLite realmente operativo, backend crittografico e filesystem runtime;
+- preflight condiviso `tools/bootstrap-preflight.php` per PHP >= 8.4, estensioni obbligatorie, PDO SQLite realmente operativo, backend crittografico e filesystem runtime;
 - `tools/package-audit.php` per verificare che una distribuzione pulita non contenga `.env.local`, database, sidecar SQLite, `vendor/` o altri file runtime;
 - nuovo comando `app:installation:verify` per path DB, separazione dev/test, `quick_check`, PRAGMA, migrazioni applicate, seed catalogo e secret applicativo;
 - `TestDatabaseReset` estratto dal wrapper PHPUnit e coperto da test dedicato;
@@ -300,6 +300,111 @@ Risultati nell'ambiente di preparazione:
 - runner indipendente: **20/20 passati**;
 - il preflight ha correttamente bloccato il runtime di preparazione perché privo di `pdo_sqlite`.
 
-La suite Symfony/PHPUnit completa non viene dichiarata eseguita nell'ambiente di preparazione, che non dispone di `pdo_sqlite` né Composer. Il gate resta quindi **in attesa della prova su estrazione pulita nell'ambiente dell'utente**.
+La suite Symfony/PHPUnit completa non era eseguibile nell'ambiente di preparazione, privo di `pdo_sqlite` e Composer. **Il gate M1.9.1 è stato successivamente validato dall'utente con verifica completa verde su estrazione pulita.**
 
 Checklist, comandi, evidenze e gate: `docs/16-m1.9.1-environment-database-verification.md`.
+
+
+## M1.9.2 — Catalog & Round Creation Verification
+
+Baseline: M1.9.1 validata dall'utente con verifica completa verde.
+
+Rafforzamenti introdotti:
+
+- `ChoicePairCatalog::delete()` applica esplicitamente `assertDeletable()`, quindi la porta finale viene bloccata al boundary applicativo oltre che da SQLite;
+- decima migrazione `Version20260719000100` con `choice_pair_source_id_snapshot`, che separa l'identità storica immutabile dal riferimento vivo `choice_pair_id`;
+- il trigger degli snapshot consente soltanto la nullificazione FK `choice_pair_id → NULL` causata dalla cancellazione della coppia sorgente e rifiuta qualunque modifica del materiale storico;
+- `DoctrineDbalQuestionSetSnapshotStore` persiste sempre identità storica e riferimento vivo con lo stesso valore iniziale;
+- nuovo comando `app:verification:catalog-round --env=test`, che esercita l'intero gate in una transazione sempre rollbackata;
+- nuovi script `verify-m1.9.2.ps1` e `verify-m1.9.2.sh`.
+
+Bug individuati durante la verifica:
+
+1. eliminazione della porta finale protetta dal DB ma non rifiutata esplicitamente dal caso d'uso applicativo;
+2. conflitto tra `ON DELETE SET NULL` e trigger di immutabilità totale di `round_question`, che impediva di eliminare una coppia già usata nonostante la documentazione garantisse assenza di effetti retroattivi.
+
+Test aggiunti: **7 metodi PHPUnit**. Totale predisposto M1.9.2: **91 metodi PHPUnit / 93 casi effettivi**, più **20 verifiche** nel runner indipendente.
+
+Copertura M1.9.2:
+
+- CRUD catalogo completo, categoria e ordinamento;
+- porta finale non eliminabile a livello applicativo e DB, seconda porta finale rifiutata;
+- minimo di 19 coppie regolari attive;
+- 19 snapshot regolari distinti + porta finale allo step 20;
+- modifica ed eliminazione della coppia sorgente senza cambiamenti retroattivi di snapshot/hash;
+- tamper diretto dello snapshot respinto;
+- fault injection sull'attivazione con rollback completo di round, snapshot e ledger;
+- secondo round `ACTIVE` rifiutato;
+- scenario di gate transazionale con prova del rollback finale delle mutazioni di verifica.
+
+Risultati nell'ambiente di preparazione:
+
+- lint PHP: **145 file OK**;
+- `tools/domain-tests.php`: **20/20 passati**;
+- suite Symfony/PHPUnit completa non dichiarata eseguita perché il runtime di preparazione non dispone di `pdo_sqlite`/Composer.
+
+Gate operativo e checklist: `docs/17-m1.9.2-catalog-round-verification.md`.
+
+## M1.9.2.1 — Runtime Compatibility & Monotonic Timing Hardening
+
+Milestone correttiva preparata dopo audit della baseline M1.9.2.
+
+Correzioni verificate staticamente nell'ambiente di preparazione:
+
+- baseline PHP ufficiale portata a 8.4+ in `composer.json`, `composer.lock`, README, preflight e bootstrap;
+- `config.platform.php = 8.4.0` e `platform-overrides` nel lock per vincolare la risoluzione futura alla baseline minima;
+- content hash del lock riallineato al manifest;
+- CI su PHP 8.4 con `composer check-platform-reqs`;
+- nuovo `RuntimeBaselinePolicy` per impedire divergenze future tra manifest, lock, documentazione, bootstrap e CI;
+- template di gioco privo di epoch assoluti `shown_at`/`available_at`;
+- `public/play.js` privo di `Date.now()` e basato su `performance.now()`;
+- timing relativo server-side aggiunto a `PlayScreen`/`OpenPlayStep`;
+- nuovi test per 2000/0 ms iniziali, 1000/1000 ms dopo refresh a +1 s e clamp 0/3000 ms dopo scadenza;
+- gate correttivo `verify-m1.9.2.1.ps1/.sh` che include anche il gate transazionale M1.9.2.
+
+Totale predisposto M1.9.2.1: **95 metodi PHPUnit / 97 casi effettivi**, più **20 verifiche indipendenti**. La suite completa Symfony/PHPUnit e `composer check-platform-reqs` devono essere validati nell'ambiente dell'utente tramite lo script di gate.
+
+Dettagli: `docs/18-m1.9.2.1-runtime-timing-hardening.md`.
+
+
+## M1.9.2.1.1 — Verification Workflow Hotfix
+
+La prima esecuzione del gate correttivo su una working copy già inizializzata ha evidenziato un difetto del workflow di verifica: `tools/package-audit.php` ispezionava il filesystem corrente e quindi classificava come contenuto illegale della release gli artefatti generati legittimamente da bootstrap e test (`.env.local`, `vendor/`, cache, DB e log).
+
+Correzione:
+
+- `tools/package-audit.php` resta il controllo rigoroso del tree pulito prima del confezionamento;
+- `release-manifest.json` registra SHA-256 dei soli file appartenenti alla release;
+- `tools/release-manifest-check.php` verifica completezza e integrità dei sorgenti anche su working copy già inizializzate;
+- file runtime/secret non possono essere dichiarati nel manifest;
+- file sorgente mancanti, modificati o inattesi fanno fallire il gate;
+- aggiunti 3 test PHPUnit dedicati.
+
+Totale predisposto dopo la hotfix: **98 metodi PHPUnit / 100 casi effettivi**, più **20 verifiche indipendenti**.
+
+Gate: `scripts/verify-m1.9.2.1.1.ps1/.sh`.
+
+
+## M1.9.2.1.2 — PHPUnit Bridge Runtime Hotfix
+
+La seconda esecuzione del gate su una working copy già usata ha evidenziato che Symfony PHPUnit Bridge genera `bin/.phpunit/` con un intero vendor tree. Il release manifest checker della M1.9.2.1.1 lo classificava erroneamente come sorgente inatteso.
+
+Correzione:
+
+- `bin/.phpunit/` esclusa dallo scope di integrità dei sorgenti installati;
+- `bin/.phpunit/` resta vietata nel package pulito e nel release manifest;
+- `.gitignore` aggiornato;
+- test dedicati sul layout reale del PHPUnit Bridge.
+
+Gate: `scripts/verify-m1.9.2.1.2.ps1/.sh`.
+
+
+## M1.9.2.1.3 — Snapshot Reference Detachment Hotfix
+
+La prima suite completa eseguita dall’utente sulla M1.9.2.1.2 ha evidenziato due failure equivalenti: dopo la cancellazione di una coppia già usata in un round, `choice_pair_id` restava valorizzato invece di diventare `NULL`.
+
+Causa: M1.9.2 affidava il distacco esclusivamente a `ON DELETE SET NULL`, che dipende da `PRAGMA foreign_keys`, impostazione connection-local. I test di servizio non attraversano necessariamente gli eventi request/console che configurano la connessione runtime.
+
+Correzione: undicesima migrazione `Version20260719000200`, con trigger `trg_choice_pair_detach_round_snapshot_reference` che prima della DELETE di una coppia `REGULAR` nullifica atomicamente soltanto il riferimento vivo. `choice_pair_source_id_snapshot` e tutto il materiale storico restano immutabili. La migrazione ripara anche eventuali riferimenti vivi già orfani.
+
+Il gate corrente è `scripts/verify-m1.9.2.1.3.ps1/.sh` e riesegue integralmente i gate precedenti.

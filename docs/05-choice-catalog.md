@@ -24,7 +24,7 @@ Porta rossa / Porta blu
 - La porta finale può essere rinominata, ma non può cambiare codice, essere disattivata o eliminata.
 - Devono essere disponibili almeno 19 coppie regolari attive prima dell'apertura di un round.
 
-La protezione della porta finale è applicata sia nel dominio PHP sia tramite trigger SQLite.
+La protezione della porta finale è applicata sia nel dominio PHP sia tramite trigger/indice SQLite. M1.9.2 verifica esplicitamente anche il percorso applicativo di eliminazione, così la porta finale viene rifiutata come regola di dominio prima di arrivare al database.
 
 ## Snapshot del round
 
@@ -32,7 +32,8 @@ Quando verrà preparato un round, il sistema selezionerà esattamente 19 coppie 
 
 Per ogni domanda vengono copiati:
 
-- identificativo della coppia sorgente;
+- identificativo immutabile della coppia sorgente (`choice_pair_source_id_snapshot`);
+- riferimento opzionale alla riga corrente del catalogo (`choice_pair_id`);
 - codice;
 - testo dell'opzione A;
 - testo dell'opzione B;
@@ -41,6 +42,8 @@ Per ogni domanda vengono copiati:
 - numero dello step.
 
 La copia è immutabile. Modificare o eliminare una coppia dal catalogo non cambia i round già preparati.
+
+Da M1.9.2 l'identità sorgente usata nell'hash è conservata in una colonna snapshot dedicata. `choice_pair_id` resta soltanto un riferimento vivo al catalogo: quando una coppia regolare viene eliminata può diventare `NULL` tramite la foreign key, mentre identità, testi, codice, categoria, tipo, step e `question_set_hash` restano invariati. Il trigger ammette esclusivamente questa nullificazione referenziale e continua a rifiutare qualunque modifica del contenuto storico.
 
 ## Hash del set di domande
 

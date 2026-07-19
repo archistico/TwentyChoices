@@ -92,9 +92,12 @@ final readonly class ChoicePairCatalog
     public function delete(string $id): void
     {
         $pair = $this->get($id);
+        $pair->assertDeletable();
+
         if ($pair->isActive()) {
             $this->assertCanRemoveActiveRegular($pair);
         }
+
         $this->repository->remove($pair);
     }
 

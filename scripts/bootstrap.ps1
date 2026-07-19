@@ -28,7 +28,7 @@ if (-not (Test-Path -LiteralPath $env:COMPOSER_CACHE_DIR)) {
 }
 
 if (-not (Get-Command php -ErrorAction SilentlyContinue)) {
-    throw "PHP non trovato. Installare PHP 8.3 o 8.4 e riaprire il terminale."
+    throw "PHP non trovato. Installare PHP 8.4 o superiore e riaprire il terminale."
 }
 
 if (-not (Get-Command composer -ErrorAction SilentlyContinue)) {
@@ -36,6 +36,7 @@ if (-not (Get-Command composer -ErrorAction SilentlyContinue)) {
 }
 
 Invoke-Checked "php" @("tools/bootstrap-preflight.php")
+Invoke-Checked "php" @("tools/runtime-baseline-check.php")
 
 # URL di base usato da Symfony quando genera URL fuori da una richiesta HTTP.
 # Viene impostato anche nel processo corrente per funzionare con eventuali env compilati.
@@ -45,6 +46,7 @@ if ([string]::IsNullOrWhiteSpace($env:DEFAULT_URI)) {
 
 Invoke-Checked "php" @("tools/ensure-local-secret.php")
 Invoke-Checked "composer" @("install", "--no-interaction", "--no-scripts")
+Invoke-Checked "composer" @("check-platform-reqs")
 Invoke-Checked "php" @("bin/console", "cache:clear")
 Invoke-Checked "php" @("bin/console", "doctrine:migrations:migrate", "--no-interaction")
 Invoke-Checked "php" @("bin/console", "app:installation:verify")

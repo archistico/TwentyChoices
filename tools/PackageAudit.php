@@ -30,6 +30,10 @@ final class PackageAudit
             $violations[] = 'vendor/';
         }
 
+        if (is_dir($root.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'.phpunit')) {
+            $violations[] = 'bin/.phpunit/';
+        }
+
         $varDirectory = $root.DIRECTORY_SEPARATOR.'var';
         if (is_dir($varDirectory)) {
             $iterator = new RecursiveIteratorIterator(

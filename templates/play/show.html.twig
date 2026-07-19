@@ -26,8 +26,8 @@
         action="{{ path('app_play_choice', {playPublicCode: play.playPublicCode}) }}"
         class="choice-form"
         data-choice-form
-        data-shown-at="{{ play.shownAtEpochMilliseconds }}"
-        data-available-at="{{ play.availableAtEpochMilliseconds }}"
+        data-wait-remaining-ms="{{ play.waitRemainingMilliseconds }}"
+        data-elapsed-at-render-ms="{{ play.elapsedSinceShownMilliseconds }}"
     >
         <input type="hidden" name="_token" value="{{ csrf_token('play_choice_' ~ play.playPublicCode) }}">
         <input type="hidden" name="challengeToken" value="{{ play.challengeToken }}">

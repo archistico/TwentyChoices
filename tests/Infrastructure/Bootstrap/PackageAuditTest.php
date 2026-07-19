@@ -32,12 +32,14 @@ final class PackageAuditTest extends TestCase
         try {
             mkdir($root.'/var/log', 0775, true);
             mkdir($root.'/vendor', 0775, true);
+            mkdir($root.'/bin/.phpunit/phpunit', 0775, true);
             file_put_contents($root.'/.env', "APP_ENV=dev\nAPP_SECRET=real-secret-that-must-not-ship\n");
             file_put_contents($root.'/.env.local', "APP_SECRET=local\n");
             file_put_contents($root.'/.env.local.php', "<?php return ['APP_SECRET' => 'compiled'];\n");
             file_put_contents($root.'/var/data.db', 'db');
             file_put_contents($root.'/var/data.db-journal', 'journal');
             file_put_contents($root.'/var/log/security.jsonl', '{}');
+            file_put_contents($root.'/bin/.phpunit/phpunit/phpunit', 'generated');
 
             $violations = (new \PackageAudit())->violations($root);
 
@@ -48,6 +50,7 @@ final class PackageAuditTest extends TestCase
             self::assertContains('var/data.db-journal', $violations);
             self::assertContains('var/log/security.jsonl', $violations);
             self::assertContains('vendor/', $violations);
+            self::assertContains('bin/.phpunit/', $violations);
         } finally {
             $this->removeDirectory($root);
         }

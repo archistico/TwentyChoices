@@ -30,6 +30,8 @@ final readonly class PlayScreen
         public ?string $requestId,
         public ?DateTimeImmutable $shownAt,
         public ?DateTimeImmutable $availableAt,
+        public ?int $waitRemainingMilliseconds,
+        public ?int $elapsedSinceShownMilliseconds,
         public ?string $verificationCode,
     ) {
     }
@@ -39,18 +41,5 @@ final readonly class PlayScreen
         return number_format($this->currentJackpotCents / 100, 2, ',', '.').' €';
     }
 
-    public function shownAtEpochMilliseconds(): ?int
-    {
-        return $this->shownAt === null ? null : self::epochMilliseconds($this->shownAt);
-    }
 
-    public function availableAtEpochMilliseconds(): ?int
-    {
-        return $this->availableAt === null ? null : self::epochMilliseconds($this->availableAt);
-    }
-
-    private static function epochMilliseconds(DateTimeImmutable $date): int
-    {
-        return ((int) $date->format('U')) * 1_000 + intdiv((int) $date->format('u'), 1_000);
-    }
 }

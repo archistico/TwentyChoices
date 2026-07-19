@@ -2,6 +2,7 @@
 /.env.local.php
 /.env.*.local
 /vendor/
+/bin/.phpunit/
 /var/*
 !/var/.gitignore
 /.phpunit.result.cache

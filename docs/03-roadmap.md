@@ -144,15 +144,24 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 - [x] Verifica post-migrazione di path DB, separazione dev/test, migrazioni, seed e PRAGMA.
 - [x] Reset deterministico `test.db`/WAL/SHM/journal estratto e coperto da test.
 - [x] Script di verifica che eseguono due bootstrap consecutivi e CI con migrazioni ripetute.
-- [ ] **Gate:** validazione su estrazione pulita con suite completa verde e bootstrap ripetibile.
+- [x] **Gate:** validazione su estrazione pulita con suite completa verde e bootstrap ripetibile.
 
 ### M1.9.2 — Catalog & Round Creation Verification
 
-- [ ] CRUD catalogo e invarianti della porta finale.
-- [ ] Minimo 19 coppie regolari attive.
-- [ ] Snapshot immutabili e selezione 19 + porta finale.
-- [ ] Apertura atomica di un solo round `ACTIVE`.
-- [ ] **Gate:** catalogo e round coerenti senza effetti retroattivi.
+- [x] CRUD catalogo e invarianti della porta finale.
+- [x] Minimo 19 coppie regolari attive.
+- [x] Snapshot immutabili e selezione 19 + porta finale.
+- [x] Apertura atomica di un solo round `ACTIVE`.
+- [ ] **Gate:** catalogo e round coerenti senza effetti retroattivi; M1.9.2.1.3 corregge il distacco atomico del riferimento vivo emerso nella prima suite completa.
+
+### M1.9.2.1 — Runtime Compatibility & Monotonic Timing Hardening
+
+- [x] PHP 8.4 impostato come baseline coerente in manifest, lock, bootstrap, preflight, README e CI.
+- [x] `config.platform.php = 8.4.0` blocca la risoluzione Composer sulla baseline minima supportata.
+- [x] `composer check-platform-reqs` aggiunto a bootstrap e CI.
+- [x] Timer browser convertito da epoch assoluti/`Date.now()` a durate relative/`performance.now()`.
+- [x] Policy e test anti-regressione aggiunti.
+- [ ] **Gate:** validazione completa PHP 8.4+ insieme al gate M1.9.2 tramite la hotfix M1.9.2.1.3.
 
 ### M1.9.3 — Cryptographic Commitment Verification
 

@@ -57,6 +57,38 @@ SQL));
             ['id' => $finalDoorId],
         );
     }
+
+    public function testSQLiteRejectsDeletingTheFinalDoor(): void
+    {
+        $finalDoorId = (string) $this->connection->fetchOne(
+            "SELECT id FROM choice_pair WHERE pair_type = 'FINAL_DOOR'",
+        );
+
+        $this->expectException(Exception::class);
+        $this->connection->executeStatement(
+            'DELETE FROM choice_pair WHERE id = :id',
+            ['id' => $finalDoorId],
+        );
+    }
+
+    public function testSQLiteRejectsASecondFinalDoor(): void
+    {
+        $this->expectException(Exception::class);
+        $this->connection->insert('choice_pair', [
+            'id' => '01M192SECONDINVALIDDOOR000',
+            'code' => 'porta-finale-seconda',
+            'option_a_text' => 'Porta uno',
+            'option_b_text' => 'Porta due',
+            'category' => 'Finale',
+            'is_active' => 1,
+            'created_at' => '2026-07-19 00:00:00.000000',
+            'updated_at' => '2026-07-19 00:00:00.000000',
+            'pair_type' => 'FINAL_DOOR',
+            'is_system' => 1,
+            'sort_order' => 10001,
+        ]);
+    }
+
     public function testSQLiteKeepsAtLeastNineteenRegularPairsActive(): void
     {
         $ids = $this->connection->fetchFirstColumn(<<<'SQL'
