@@ -54,18 +54,14 @@ function prepareTestDatabase(string $projectDir): void
         return;
     }
 
-    $varDir = $projectDir.DIRECTORY_SEPARATOR.'var';
-    if (!is_dir($varDir) && !mkdir($varDir, 0775, true) && !is_dir($varDir)) {
-        fwrite(STDERR, "Unable to create var directory for the test database.\n");
-        exit(1);
-    }
+    require_once $projectDir.DIRECTORY_SEPARATOR.'tools'.DIRECTORY_SEPARATOR.'TestDatabaseReset.php';
 
-    $database = $varDir.DIRECTORY_SEPARATOR.'test.db';
-    foreach ([$database, $database.'-wal', $database.'-shm'] as $path) {
-        if (is_file($path) && !unlink($path)) {
-            fwrite(STDERR, sprintf("Unable to remove stale test database file: %s\n", $path));
-            exit(1);
-        }
+    $database = $projectDir.DIRECTORY_SEPARATOR.'var'.DIRECTORY_SEPARATOR.'test.db';
+    try {
+        TestDatabaseReset::reset($database);
+    } catch (Throwable $exception) {
+        fwrite(STDERR, $exception->getMessage()."\n");
+        exit(1);
     }
 
     $console = $projectDir.DIRECTORY_SEPARATOR.'bin'.DIRECTORY_SEPARATOR.'console';

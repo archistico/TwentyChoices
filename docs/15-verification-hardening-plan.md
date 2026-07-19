@@ -1,5 +1,7 @@
 # M1.9 — Verification & Hardening Plan
 
+> Stato corrente: **M1.9.1 implementata e in attesa di validazione del gate su estrazione pulita**. Evidenze e checklist operative: `docs/16-m1.9.1-environment-database-verification.md`.
+
 ## Obiettivo
 
 La fase M1.9 interrompe temporaneamente lo sviluppo di nuove funzionalità e verifica l'intero sistema TwentyChoices in modo progressivo, osservabile e ripetibile.

@@ -6,9 +6,9 @@ Prototipo gratuito e simulatore tecnico di un gioco a venti scelte binarie. Ogni
 
 ## Stato del progetto
 
-Milestone corrente: **M1.8.2 — Autenticazione amministrativa, autorizzazioni, CSP/UI ed E2E (in fase di validazione completa della suite)**.
+Milestone corrente: **M1.9.1 — Environment & Database Verification (implementata, in attesa di validazione del gate su estrazione pulita)**.
 
-M1.8.2 consolida M1.8.1: configura i PRAGMA SQLite prima di aprire la transazione esterna dei browser test, evitando errori HTTP 500 dovuti a `PRAGMA synchronous` eseguito dentro una transazione. M1.8.1 aggiunge isolamento transazionale degli E2E, mantiene stabile il clock controllato durante i browser test e rende `php bin/phpunit` deterministico ricreando automaticamente il database test. M1.8 aggiunge autenticazione individuale all'area amministrativa mantenendo l'allowlist IP come difesa aggiuntiva. Introduce ruoli espliciti, invalidazione delle sessioni dopo modifiche di sicurezza, CSP senza `unsafe-inline`, UI più accessibile e test browser completi dei flussi critici.
+M1.9.1 avvia la fase di Verification & Hardening sulla baseline M1.8.2. Introduce un preflight PHP unico per Windows/Unix, audit automatico del pacchetto pulito, verifica post-migrazione di database/migrazioni/seed/PRAGMA, reset del DB test testabile e script che eseguono due bootstrap consecutivi per dimostrare la ripetibilità dell'installazione. Nessuna regola di gioco viene modificata.
 
 Prima di avviare M2.1 è stata pianificata la fase **M1.9 — Verification & Hardening**, composta da 15 milestone bloccanti che verificano l’intero processo pezzo per pezzo. Il piano completo è in `docs/15-verification-hardening-plan.md`.
 
@@ -56,6 +56,20 @@ php -S 127.0.0.1:8000 -t public
 ./scripts/bootstrap.sh
 php -S 127.0.0.1:8000 -t public
 ```
+
+Verifica completa M1.9.1 da una nuova estrazione del pacchetto:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.1.ps1
+```
+
+oppure:
+
+```bash
+./scripts/verify-m1.9.1.sh
+```
+
+La verifica esegue l'audit del pacchetto e due bootstrap consecutivi, quindi controlla nuovamente database, migrazioni, seed e PRAGMA.
 
 Il bootstrap genera automaticamente un `APP_SECRET` casuale in `.env.local` se non è già presente. Il file è escluso da Git e non viene distribuito nello ZIP. L’area amministrativa è limitata per default a `127.0.0.1` e `::1` tramite `ADMIN_ALLOWED_IPS`.
 
@@ -176,7 +190,7 @@ php tools/domain-tests.php
 php bin/phpunit
 ```
 
-La suite M1.8.2 contiene **79 metodi PHPUnit**, pari a **81 casi effettivi** considerando il data provider di `WinningPathTest`. Il runner indipendente contiene **20 verifiche**.
+La suite M1.9.1 contiene **84 metodi PHPUnit**, pari a **86 casi effettivi** considerando il data provider di `WinningPathTest`. Il runner indipendente contiene **20 verifiche**.
 
 ## Documentazione
 
@@ -195,6 +209,7 @@ La suite M1.8.2 contiene **79 metodi PHPUnit**, pari a **81 casi effettivi** con
 - `docs/13-admin-auth-e2e.md`
 - `docs/14-release-checklist.md`
 - `docs/15-verification-hardening-plan.md`
+- `docs/16-m1.9.1-environment-database-verification.md`
 
 
 ## Simulazioni statistiche

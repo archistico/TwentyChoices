@@ -15,20 +15,7 @@ command -v composer >/dev/null 2>&1 || {
     exit 1
 }
 
-php -r "exit(in_array('sqlite', PDO::getAvailableDrivers(), true) ? 0 : 1);" || {
-    echo "The PHP CLI runtime does not provide the PDO SQLite driver." >&2
-    loaded_ini=$(php -r 'echo php_ini_loaded_file() ?: "(none)";')
-    echo "Loaded php.ini: ${loaded_ini}" >&2
-    echo "Enable pdo_sqlite (and preferably sqlite3) before continuing." >&2
-    exit 1
-}
-
-php -r 'exit(function_exists("sodium_crypto_secretbox") || (function_exists("openssl_encrypt") && in_array("aes-256-gcm", openssl_get_cipher_methods(), true)) ? 0 : 1);' || {
-    echo "Sodium secretbox or OpenSSL AES-256-GCM is required." >&2
-    exit 1
-}
-
-php -r '$pdo = new PDO("sqlite::memory:"); echo "PDO SQLite operational." . PHP_EOL;'
+php tools/bootstrap-preflight.php
 
 run() {
     printf '> %s\n' "$*"
@@ -39,6 +26,7 @@ run php tools/ensure-local-secret.php
 run composer install --no-interaction --no-scripts
 run php bin/console cache:clear
 run php bin/console doctrine:migrations:migrate --no-interaction
+run php bin/console app:installation:verify
 run php bin/console app:system:check
 
 # bin/phpunit recreates var/test.db and applies all migrations itself, so direct

@@ -16,15 +16,44 @@ Linux/macOS:
 
 Il bootstrap:
 
-1. verifica PHP, PDO SQLite e backend crittografico;
+1. esegue il preflight condiviso per PHP, estensioni, PDO SQLite, crypto e filesystem;
 2. genera `APP_SECRET` locale se assente;
 3. installa Composer senza auto-script impliciti;
 4. valida il kernel con `cache:clear`;
 5. applica le migrazioni;
-6. esegue `app:system:check`;
-7. esegue i test di dominio;
-8. avvia `bin/phpunit`, che ricrea autonomamente `var/test.db` (inclusi eventuali `-wal` e `-shm`) e applica tutte le migrazioni test prima della suite.
+6. esegue `app:installation:verify` su database, migrazioni, seed e PRAGMA;
+7. esegue `app:system:check`;
+8. esegue i test di dominio;
+9. avvia `bin/phpunit`, che ricrea autonomamente `var/test.db` (inclusi eventuali `-wal`, `-shm` e `-journal`) e applica tutte le migrazioni test prima della suite.
 
+
+## Gate M1.9.1 — installazione pulita e ripetibile
+
+La verifica deve partire da una nuova estrazione dello ZIP, prima di creare `.env.local`, `vendor/` o database runtime.
+
+Windows:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.1.ps1
+```
+
+Linux/macOS:
+
+```bash
+./scripts/verify-m1.9.1.sh
+```
+
+Gli script eseguono package audit, bootstrap completo due volte e verifica finale dell'installazione. Il secondo bootstrap è parte del gate: deve terminare senza duplicazioni, errori di migrazione o contaminazione del database test.
+
+Comandi diagnostici singoli:
+
+```bash
+php tools/package-audit.php
+php tools/bootstrap-preflight.php
+php bin/console app:installation:verify
+```
+
+Dettagli e checklist: `docs/16-m1.9.1-environment-database-verification.md`.
 
 ### Esecuzione diretta PHPUnit
 

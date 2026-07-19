@@ -277,3 +277,29 @@ Prima di riprendere nuove funzionalità M2.1 è stata formalizzata una fase di v
 La fase copre, nell'ordine: ambiente/database, catalogo e apertura round, commitment, avvio giocata e contabilità, timer/anti-replay, journey perdente, settlement vincente, concorrenza, reset/crediti, ricevute/verifica pubblica, ledger/audit, amministrazione/sicurezza HTTP, fault injection/recovery, performance/limiti SQLite e full journey finale.
 
 Ogni milestone richiede checklist manuale, test automatici, risultati osservati, correzioni, documentazione, ZIP completo e validazione esplicita. Il piano dettagliato e i gate di accettazione sono in `docs/15-verification-hardening-plan.md`.
+
+## M1.9.1 — Environment & Database Verification
+
+Prima milestone della fase Verification & Hardening, applicata alla baseline M1.8.2 senza modificare regole di gioco o schema applicativo.
+
+Rafforzamenti introdotti:
+
+- preflight condiviso `tools/bootstrap-preflight.php` per PHP >= 8.3, estensioni obbligatorie, PDO SQLite realmente operativo, backend crittografico e filesystem runtime;
+- `tools/package-audit.php` per verificare che una distribuzione pulita non contenga `.env.local`, database, sidecar SQLite, `vendor/` o altri file runtime;
+- nuovo comando `app:installation:verify` per path DB, separazione dev/test, `quick_check`, PRAGMA, migrazioni applicate, seed catalogo e secret applicativo;
+- `TestDatabaseReset` estratto dal wrapper PHPUnit e coperto da test dedicato;
+- script `verify-m1.9.1.ps1` e `verify-m1.9.1.sh`, che da estrazione pulita eseguono package audit, due bootstrap consecutivi e verifica finale;
+- CI rafforzata con package audit, preflight e doppia applicazione consecutiva delle migrazioni test per verificare esplicitamente l'idempotenza.
+
+Test aggiunti: **5 metodi PHPUnit**. Totale predisposto M1.9.1: **84 metodi PHPUnit / 86 casi effettivi**, più **20 verifiche** nel runner indipendente.
+
+Risultati nell'ambiente di preparazione:
+
+- lint PHP dei file nuovi/modificati: **OK**;
+- package audit: **OK**;
+- runner indipendente: **20/20 passati**;
+- il preflight ha correttamente bloccato il runtime di preparazione perché privo di `pdo_sqlite`.
+
+La suite Symfony/PHPUnit completa non viene dichiarata eseguita nell'ambiente di preparazione, che non dispone di `pdo_sqlite` né Composer. Il gate resta quindi **in attesa della prova su estrazione pulita nell'ambiente dell'utente**.
+
+Checklist, comandi, evidenze e gate: `docs/16-m1.9.1-environment-database-verification.md`.

@@ -139,10 +139,12 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 
 ### M1.9.1 — Environment & Database Verification
 
-- [ ] Installazione pulita e bootstrap ripetibile.
-- [ ] Segreti locali, estensioni PHP, SQLite e PRAGMA verificati.
-- [ ] Migrazioni complete da zero e database test deterministico.
-- [ ] **Gate:** installazione automatica senza dipendenze nascoste.
+- [x] Preflight unico Windows/Unix per PHP, estensioni, PDO SQLite, crypto e filesystem runtime.
+- [x] Audit automatico del pacchetto per escludere segreti, database, vendor e artefatti runtime.
+- [x] Verifica post-migrazione di path DB, separazione dev/test, migrazioni, seed e PRAGMA.
+- [x] Reset deterministico `test.db`/WAL/SHM/journal estratto e coperto da test.
+- [x] Script di verifica che eseguono due bootstrap consecutivi e CI con migrazioni ripetute.
+- [ ] **Gate:** validazione su estrazione pulita con suite completa verde e bootstrap ripetibile.
 
 ### M1.9.2 — Catalog & Round Creation Verification
 

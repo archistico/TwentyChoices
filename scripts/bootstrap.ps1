@@ -17,58 +17,6 @@ function Invoke-Checked {
     }
 }
 
-function Get-PhpRuntimeInfo {
-    $binary = (& php -r "echo PHP_BINARY;")
-    if ($LASTEXITCODE -ne 0) {
-        throw "Impossibile determinare l'eseguibile PHP in uso."
-    }
-
-    $ini = (& php -r "echo php_ini_loaded_file() ?: '(nessun php.ini caricato)';")
-    if ($LASTEXITCODE -ne 0) {
-        throw "Impossibile determinare il php.ini in uso."
-    }
-
-    return [PSCustomObject]@{
-        Binary = $binary
-        Ini = $ini
-    }
-}
-
-function Assert-SqlitePdoDriver {
-    & php -r "exit(in_array('sqlite', PDO::getAvailableDrivers(), true) ? 0 : 1);"
-
-    if ($LASTEXITCODE -eq 0) {
-        return
-    }
-
-    $runtime = Get-PhpRuntimeInfo
-
-    $message = @"
-Il PHP usato dal terminale non dispone del driver PDO SQLite.
-
-Eseguibile PHP: $($runtime.Binary)
-php.ini caricato: $($runtime.Ini)
-
-Aprire il php.ini indicato e verificare queste righe:
-
-extension_dir = "ext"
-extension=pdo_sqlite
-extension=sqlite3
-
-Se le estensioni sono commentate con ';', rimuovere il punto e virgola.
-Chiudere e riaprire il terminale, quindi verificare con:
-
-php -r "print_r(PDO::getAvailableDrivers());"
-
-L'elenco deve contenere 'sqlite'. Se Composer usa un PHP diverso, confrontare anche:
-
-where.exe php
-php --ini
-"@
-
-    throw $message
-}
-
 $varDir = Join-Path $PSScriptRoot "..\var"
 if (-not (Test-Path -LiteralPath $varDir)) {
     New-Item -ItemType Directory -Path $varDir | Out-Null
@@ -87,12 +35,7 @@ if (-not (Get-Command composer -ErrorAction SilentlyContinue)) {
     throw "Composer non trovato. Installare Composer e riaprire il terminale."
 }
 
-Assert-SqlitePdoDriver
-
-Invoke-Checked "php" @("-r", "exit(function_exists('sodium_crypto_secretbox') || (function_exists('openssl_encrypt') && in_array('aes-256-gcm', openssl_get_cipher_methods(), true)) ? 0 : 1);")
-
-# Verifica anche che PDO riesca ad aprire realmente una connessione SQLite.
-Invoke-Checked "php" @("-r", "`$pdo = new PDO('sqlite::memory:'); echo 'PDO SQLite operativo.' . PHP_EOL;")
+Invoke-Checked "php" @("tools/bootstrap-preflight.php")
 
 # URL di base usato da Symfony quando genera URL fuori da una richiesta HTTP.
 # Viene impostato anche nel processo corrente per funzionare con eventuali env compilati.
@@ -104,6 +47,7 @@ Invoke-Checked "php" @("tools/ensure-local-secret.php")
 Invoke-Checked "composer" @("install", "--no-interaction", "--no-scripts")
 Invoke-Checked "php" @("bin/console", "cache:clear")
 Invoke-Checked "php" @("bin/console", "doctrine:migrations:migrate", "--no-interaction")
+Invoke-Checked "php" @("bin/console", "app:installation:verify")
 Invoke-Checked "php" @("bin/console", "app:system:check")
 
 # bin/phpunit ricrea autonomamente var/test.db e applica tutte le migrazioni,
