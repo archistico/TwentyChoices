@@ -34,13 +34,19 @@ final class PlayJourneyE2ETest extends TransactionalWebTestCase
             $container->get(OpenRound::class)->open();
         }
 
-        $round = $connection->fetchAssociative("SELECT id, public_code, encrypted_winning_path FROM game_round WHERE status = 'ACTIVE' LIMIT 1");
+        $round = $connection->fetchAssociative("SELECT id, public_code, encrypted_winning_path, encrypted_secret_nonce FROM game_round WHERE status = 'ACTIVE' LIMIT 1");
         self::assertIsArray($round);
         $ciphertext = $round['encrypted_winning_path'];
         if (is_resource($ciphertext)) {
             $ciphertext = stream_get_contents($ciphertext);
         }
-        $winningPath = $container->get(RoundSecretCipher::class)->decrypt((string) $ciphertext, OpenRound::pathContext((string) $round['id']));
+        $cipher = $container->get(RoundSecretCipher::class);
+        $winningPath = $cipher->decrypt((string) $ciphertext, OpenRound::pathContext((string) $round['id']));
+        $nonceCiphertext = $round['encrypted_secret_nonce'];
+        if (is_resource($nonceCiphertext)) {
+            $nonceCiphertext = stream_get_contents($nonceCiphertext);
+        }
+        $secretNonce = $cipher->decrypt((string) $nonceCiphertext, OpenRound::nonceContext((string) $round['id']));
         self::assertSame(20, strlen($winningPath));
 
         // Una seconda giocata resta aperta e deve essere accreditata al settlement.
@@ -86,11 +92,23 @@ final class PlayJourneyE2ETest extends TransactionalWebTestCase
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('Hai trovato la strada', $crawler->filter('body')->text());
 
-        $oldRound = $connection->fetchAssociative('SELECT status, winner_play_id FROM game_round WHERE id = :id', ['id' => $round['id']]);
+        $oldRound = $connection->fetchAssociative(<<<'SQL'
+SELECT status, winner_play_id, frozen_jackpot_cents, revealed_winning_path,
+       revealed_secret_nonce_hex, verification_published_at
+FROM game_round
+WHERE id = :id
+SQL, ['id' => $round['id']]);
+        self::assertIsArray($oldRound);
         self::assertSame('SETTLED', $oldRound['status']);
         self::assertNotNull($oldRound['winner_play_id']);
+        self::assertSame(1_000_160, (int) $oldRound['frozen_jackpot_cents']);
+        self::assertSame($winningPath, $oldRound['revealed_winning_path']);
+        self::assertSame(bin2hex($secretNonce), $oldRound['revealed_secret_nonce_hex']);
+        self::assertNotNull($oldRound['verification_published_at']);
         self::assertSame(1, (int) $connection->fetchOne("SELECT COUNT(*) FROM game_round WHERE status = 'ACTIVE'"));
+        self::assertSame(1, (int) $connection->fetchOne("SELECT COUNT(*) FROM ledger_entry WHERE round_id = :id AND entry_type = 'JACKPOT_PAYOUT' AND amount_cents = 1000160", ['id' => $round['id']]));
         self::assertSame('CREDITED', $connection->fetchOne('SELECT status FROM play WHERE public_code = :code', ['code' => $pendingPlay->publicCode]));
         self::assertSame('AVAILABLE', $connection->fetchOne('SELECT status FROM play_credit WHERE source_play_id = (SELECT id FROM play WHERE public_code = :code)', ['code' => $pendingPlay->publicCode]));
+        self::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM play_receipt WHERE round_id = :id', ['id' => $round['id']]));
     }
 }

@@ -241,6 +241,96 @@ SQL);
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM game_round'));
     }
 
+    public function testLateFaultBeforeSettledRollsBackWinnerPayoutCreditsReceiptsAndNextRound(): void
+    {
+        $round = self::getContainer()->get(OpenRound::class)->open();
+        $sessions = self::getContainer()->get(PlayerSessionRegistry::class);
+        $winnerSession = $sessions->resolve(null);
+        $pendingSession = $sessions->resolve(null);
+        $start = self::getContainer()->get(StartPlay::class);
+        $winnerPlay = $start->start($winnerSession->id);
+        $pendingPlay = $start->start($pendingSession->id);
+        $winningBits = $this->winningBits($round->id);
+        $open = self::getContainer()->get(OpenPlayStep::class);
+        $submit = self::getContainer()->get(SubmitChoice::class);
+
+        for ($index = 0; $index < 19; ++$index) {
+            $screen = $open->open($winnerPlay->publicCode, $winnerSession->id);
+            $this->clock->advance('+2 seconds');
+            $submit->submit(
+                $winnerPlay->publicCode,
+                $winnerSession->id,
+                (string) $screen->challengeToken,
+                $winningBits[$index] === '0' ? 'A' : 'B',
+                (string) $screen->requestId,
+                2_000,
+            );
+        }
+
+        // Opening step 20 is intentionally outside the final choice transaction: it persists the
+        // STEP_SHOWN audit event and the challenge before the user can submit the winning choice.
+        // Snapshot the rollback baseline only after that legitimate pre-submit work has completed.
+        $screen = $open->open($winnerPlay->publicCode, $winnerSession->id);
+        $beforeRounds = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM game_round');
+        $beforeLedger = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM ledger_entry');
+        $beforeAudit = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM audit_event');
+
+        $this->connection->executeStatement(<<<'SQL'
+CREATE TRIGGER trg_test_fault_before_settled
+BEFORE UPDATE OF status ON game_round
+WHEN NEW.status = 'SETTLED'
+BEGIN
+    SELECT RAISE(ABORT, 'injected late settlement failure');
+END
+SQL);
+
+        try {
+            $this->clock->advance('+2 seconds');
+            $failure = null;
+            try {
+                $submit->submit(
+                    $winnerPlay->publicCode,
+                    $winnerSession->id,
+                    (string) $screen->challengeToken,
+                    $winningBits[19] === '0' ? 'A' : 'B',
+                    (string) $screen->requestId,
+                    2_000,
+                );
+            } catch (\Throwable $exception) {
+                $failure = $exception;
+            }
+            self::assertNotNull($failure, 'La fault injection tardiva deve annullare l’intero settlement.');
+        } finally {
+            $this->connection->executeStatement('DROP TRIGGER IF EXISTS trg_test_fault_before_settled');
+        }
+
+        $oldRound = $this->connection->fetchAssociative(<<<'SQL'
+SELECT status, winner_play_id, frozen_jackpot_cents, won_at, settled_at,
+       revealed_winning_path, revealed_secret_nonce_hex, verification_published_at
+FROM game_round
+WHERE id = :id
+SQL, ['id' => $round->id]);
+        self::assertIsArray($oldRound);
+        self::assertSame('ACTIVE', $oldRound['status']);
+        self::assertNull($oldRound['winner_play_id']);
+        self::assertNull($oldRound['frozen_jackpot_cents']);
+        self::assertNull($oldRound['won_at']);
+        self::assertNull($oldRound['settled_at']);
+        self::assertNull($oldRound['revealed_winning_path']);
+        self::assertNull($oldRound['revealed_secret_nonce_hex']);
+        self::assertNull($oldRound['verification_published_at']);
+
+        self::assertSame('IN_PROGRESS', $this->connection->fetchOne('SELECT status FROM play WHERE id = :id', ['id' => $winnerPlay->id]));
+        self::assertSame(19, (int) $this->connection->fetchOne('SELECT current_step FROM play WHERE id = :id', ['id' => $winnerPlay->id]));
+        self::assertSame('IN_PROGRESS', $this->connection->fetchOne('SELECT status FROM play WHERE id = :id', ['id' => $pendingPlay->id]));
+        self::assertSame(0, (int) $this->connection->fetchOne("SELECT COUNT(*) FROM ledger_entry WHERE round_id = :id AND entry_type = 'JACKPOT_PAYOUT'", ['id' => $round->id]));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM play_credit WHERE source_round_id = :id', ['id' => $round->id]));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM play_receipt WHERE round_id = :id', ['id' => $round->id]));
+        self::assertSame($beforeRounds, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM game_round'));
+        self::assertSame($beforeLedger, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM ledger_entry'));
+        self::assertSame($beforeAudit, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM audit_event'));
+    }
+
     public function testStaleConcurrentChoiceCannotOverwriteTheAlreadyValidatedWinner(): void
     {
         $round = self::getContainer()->get(OpenRound::class)->open();

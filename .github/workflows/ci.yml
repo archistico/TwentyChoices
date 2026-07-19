@@ -33,3 +33,5 @@ jobs:
       - run: php bin/console app:verification:step-timer-anti-replay --env=test
       - run: php bin/console doctrine:migrations:migrate --no-interaction --env=test
       - run: php bin/console app:verification:full-losing-journey --env=test
+      - run: php bin/console doctrine:migrations:migrate --no-interaction --env=test
+      - run: php bin/console app:verification:winning-settlement --env=test

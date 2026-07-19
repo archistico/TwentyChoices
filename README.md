@@ -6,9 +6,9 @@ Prototipo gratuito e simulatore tecnico di un gioco a venti scelte binarie. Ogni
 
 ## Stato del progetto
 
-Milestone corrente: **M1.9.6 — Full Losing Journey Verification (implementata, in attesa di validazione)**.
+Milestone corrente: **M1.9.7.1 — Late Fault Audit Baseline Hotfix (implementata, in attesa di validazione)**.
 
-M1.9.1, M1.9.2, la linea correttiva fino a **M1.9.2.1.3**, **M1.9.3**, **M1.9.4**, **M1.9.4.1** e **M1.9.5** sono state validate con verifica completa verde. La baseline ufficiale è **TwentyChoices M1.9.5 su PHP 8.4+**. M1.9.6 verifica ora il viaggio perdente completo 1/20 → 20/20: la perdita deve chiudere soltanto la play, emettere una ricevuta integra senza reveal, lasciare il round `ACTIVE` e consentire una nuova partecipazione nello stesso round.
+M1.9.1, M1.9.2, la linea correttiva fino a **M1.9.2.1.3**, **M1.9.3**, **M1.9.4**, **M1.9.4.1**, **M1.9.5** e **M1.9.6** sono state validate con verifica completa verde. La baseline ufficiale è **TwentyChoices M1.9.6 su PHP 8.4+**. M1.9.7 verifica l’intero settlement vincente. M1.9.7.1 corregge esclusivamente la baseline temporale del test di fault injection: lo `STEP_SHOWN` dello step 20 è una transazione precedente e legittimamente committata, mentre il rollback deve annullare soltanto gli effetti della successiva scelta/settlement.
 
 Prima di avviare M2.1 è stata pianificata la fase **M1.9 — Verification & Hardening**, composta da 15 milestone bloccanti che verificano l’intero processo pezzo per pezzo. Il piano completo è in `docs/15-verification-hardening-plan.md`.
 
@@ -57,19 +57,19 @@ php -S 127.0.0.1:8000 -t public
 php -S 127.0.0.1:8000 -t public
 ```
 
-Verifica completa M1.9.6, rieseguibile anche su una working copy già inizializzata e dopo precedenti esecuzioni PHPUnit:
+Verifica completa M1.9.7.1, rieseguibile anche su una working copy già inizializzata e dopo precedenti esecuzioni PHPUnit:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.6.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.7.1.ps1
 ```
 
 oppure:
 
 ```bash
-./scripts/verify-m1.9.6.sh
+./scripts/verify-m1.9.7.1.sh
 ```
 
-La verifica controlla il manifest SHA-256 della release, la coerenza della baseline PHP/Composer, la policy anti-clock-skew del timer, il bootstrap completo con `composer check-platform-reqs`, la regressione totale e tutti i gate ereditati fino a M1.9.5. M1.9.6 aggiunge il gate transazionale del percorso perdente completo: 20 risposte persistite, `COMPLETED_LOST`, round ancora `ACTIVE`, ricevuta integra senza reveal e nuova partecipazione consentita nello stesso round. Un E2E browser percorre realmente tutte le 20 schermate con clock congelato e verifica anche la pagina di ricevuta e il pulsante `Riprova`. Il package audit rigoroso resta un controllo separato del tree pulito usato durante il confezionamento della release. `bin/.phpunit/`, scaricata automaticamente dal Symfony PHPUnit Bridge, è trattata come tooling runtime e non come sorgente della release. Restano disponibili anche gli script dei gate precedenti.
+La verifica M1.9.7.1 riesegue integralmente M1.9.7 e controlla il manifest SHA-256 della release, la coerenza della baseline PHP/Composer, la policy anti-clock-skew del timer, il bootstrap completo con `composer check-platform-reqs`, la regressione totale e tutti i gate ereditati fino a M1.9.6. M1.9.7 aggiunge il gate transazionale del settlement vincente completo: tre partecipazioni STANDARD, freeze esatto del jackpot, un solo payout, due crediti di ripartenza, un solo nuovo round da 10.000,00 €, reveal/commitment e ricevute terminali coerenti. Una fault injection subito prima di `WON → SETTLED` dimostra inoltre che nessun effetto parziale sopravvive al rollback. Il package audit rigoroso resta un controllo separato del tree pulito usato durante il confezionamento della release. `bin/.phpunit/`, scaricata automaticamente dal Symfony PHPUnit Bridge, è trattata come tooling runtime e non come sorgente della release. Restano disponibili anche gli script dei gate precedenti.
 
 Il bootstrap genera automaticamente un `APP_SECRET` casuale in `.env.local` se non è già presente. Il file è escluso da Git e non viene distribuito nello ZIP. L’area amministrativa è limitata per default a `127.0.0.1` e `::1` tramite `ADMIN_ALLOWED_IPS`.
 
@@ -190,7 +190,7 @@ php tools/domain-tests.php
 php bin/phpunit
 ```
 
-La suite corrente contiene **115 metodi PHPUnit**, pari a **120 casi effettivi** considerando i data provider di `WinningPathTest` e `RoundCommitmentTest`. Il runner indipendente contiene **20 verifiche**. I comandi `app:verification:catalog-round --env=test`, `app:verification:cryptographic-commitment --env=test`, `app:verification:play-start-accounting --env=test` e `app:verification:step-timer-anti-replay --env=test` aggiungono scenari transazionali di gate interamente rollbackati.
+La suite corrente contiene **119 metodi PHPUnit**, pari a **124 casi effettivi** considerando i data provider di `WinningPathTest` e `RoundCommitmentTest`. Il runner indipendente contiene **20 verifiche**. I comandi di verifica dedicati fino a `app:verification:winning-settlement --env=test` aggiungono scenari transazionali di gate interamente rollbackati.
 
 ## Documentazione
 
@@ -219,6 +219,8 @@ La suite corrente contiene **115 metodi PHPUnit**, pari a **120 casi effettivi**
 - `docs/23-m1.9.4-play-start-accounting-verification.md`
 - `docs/24-m1.9.4.1-accounting-schema-enforcement-hotfix.md`
 - `docs/25-m1.9.5-step-timer-anti-replay-verification.md`
+- `docs/26-m1.9.6-full-losing-journey-verification.md`
+- `docs/27-m1.9.7-winning-settlement-verification.md`
 
 
 ## Simulazioni statistiche

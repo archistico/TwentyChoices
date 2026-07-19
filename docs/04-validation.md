@@ -537,3 +537,52 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.6.ps1
 ```
 
 Dettagli: `docs/26-m1.9.6-full-losing-journey-verification.md`.
+
+
+## M1.9.7 — Winning Settlement Verification
+
+Baseline: **M1.9.6 validata integralmente dall'utente**.
+
+Verifiche introdotte:
+
+- nuovo `WinningSettlementGateVerifier` transazionale;
+- nuovo comando `app:verification:winning-settlement --env=test`;
+- tre partecipazioni STANDARD e riconciliazione esatta `1.000.000 + 3 × 80 = 1.000.240` centesimi;
+- percorso vincente completo 1/20 → 20/20 e unico `winner_play_id`;
+- un solo `JACKPOT_PAYOUT` uguale al jackpot congelato;
+- due play concorrenti `CREDITED`, ciascuna con un solo credito AVAILABLE e movimento `RESTART_CREDIT_ISSUED`;
+- un solo nuovo round ACTIVE con seed 1.000.000, contribuzione zero e 20 snapshot;
+- reveal di percorso/nonce e ricalcolo positivo del commitment;
+- ricevute terminali integre e coerenti per winner e giocate interrotte;
+- fault injection immediatamente prima di `WON → SETTLED`, dopo gli effetti intermedi più critici;
+- rollback verificato di scelta 20, winner claim, freeze, payout, crediti, ricevute, audit e nuovo round;
+- regressione `RoundSettlementTest` dedicata al fault tardivo;
+- E2E vincente rafforzato con freeze, payout, reveal e conteggio ricevute;
+- CI estesa con il gate M1.9.7.
+
+Suite predisposta: **119 metodi PHPUnit / 124 casi effettivi**, più **20 verifiche indipendenti**.
+
+Gate operativo:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.7.ps1
+```
+
+Dettagli: `docs/27-m1.9.7-winning-settlement-verification.md`.
+
+
+## M1.9.7.1 — Late Fault Audit Baseline Hotfix
+
+La prima esecuzione completa di M1.9.7 ha prodotto un solo failure nel test di fault tardivo: il contatore `audit_event` risultava maggiore di uno. Le asserzioni su round, play, payout, crediti, ricevute, ledger e numero di round erano già tutte verdi.
+
+La causa era nel test: `beforeAudit` veniva fotografato prima di `OpenPlayStep::open()` dello step 20. L'apertura dello step registra e committa legittimamente `STEP_SHOWN` prima del POST finale; tale evento non appartiene alla transazione di settlement e non deve essere rollbackato dal fault successivo.
+
+La baseline viene ora acquisita dopo l'apertura dello step 20 e immediatamente prima della scelta finale. Nessun codice produttivo è stato modificato.
+
+Gate operativo:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.7.1.ps1
+```
+
+Dettagli: `docs/28-m1.9.7.1-late-fault-audit-baseline-hotfix.md`.

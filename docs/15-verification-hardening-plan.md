@@ -725,3 +725,19 @@ Baseline di partenza: **M1.9.5 validata integralmente dall'utente**.
 M1.9.6 aggiunge un gate transazionale e un E2E browser completi per il percorso perdente. Il percorso di prova diverge dal segreto fin dalla prima scelta ma deve comunque raggiungere 20/20, dimostrando che non esiste terminazione anticipata. Dopo la perdita vengono verificati `COMPLETED_LOST`, 20 step persistiti, ricevuta integra, round ancora `ACTIVE`, assenza di winner/payout/crediti/nuovo round/reveal e possibilità di una nuova partecipazione nello stesso round.
 
 Gate: `scripts/verify-m1.9.6.ps1/.sh`.
+
+
+## Stato implementazione M1.9.7 — Winning Settlement Verification
+
+Baseline di partenza: **M1.9.6 validata integralmente dall'utente**.
+
+M1.9.7 aggiunge un gate transazionale completo sul percorso vincente. Tre partecipazioni STANDARD producono un jackpot congelato atteso di 1.000.240 centesimi; il gate verifica winner claim, payout unico, accredito delle altre play, nuovo round da 10.000,00 €, reveal, ricalcolo commitment e ricevute terminali coerenti. Una fault injection immediatamente prima di `WON → SETTLED` dimostra che anche un errore tardivo rollbacka scelta 20, winner, payout, crediti, ricevute, audit e round successivo, lasciando persistito soltanto lo stato pre-settlement.
+
+Gate: `scripts/verify-m1.9.7.ps1/.sh`.
+
+
+## Correzione M1.9.7.1 — Late Fault Audit Baseline Hotfix
+
+La fault injection M1.9.7 ha confermato il rollback di tutti gli effetti del settlement, ma il test PHPUnit acquisiva il contatore audit prima dell'apertura dello step 20. `OpenPlayStep::open()` committa legittimamente `STEP_SHOWN` prima della scelta finale; la baseline corretta deve quindi essere acquisita dopo tale apertura. M1.9.7.1 corregge solo il test e la documentazione, senza modificare il settlement produttivo.
+
+Gate: `scripts/verify-m1.9.7.1.ps1/.sh`.

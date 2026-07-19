@@ -201,14 +201,16 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 - [x] `COMPLETED_LOST`, round ancora `ACTIVE`, 20 step persistiti e ricevuta valida.
 - [x] Nessun reveal anticipato; nessun winner, payout, credito o nuovo round causato dalla perdita.
 - [x] Nuova partecipazione della stessa sessione consentita nello stesso round.
-- [ ] **Gate:** validazione esplicita con `verify-m1.9.6.ps1/.sh`; una perdita chiude solo la giocata.
+- [x] **Gate:** validazione esplicita con `verify-m1.9.6.ps1/.sh`; una perdita chiude solo la giocata.
 
 ### M1.9.7 — Winning Settlement Verification
 
-- [ ] Percorso vincente completo.
-- [ ] Winner claim, freeze jackpot, payout, crediti, nuovo round, reveal e settlement atomici.
-- [ ] Riconciliazione del jackpot congelato.
-- [ ] **Gate:** nessuno stato intermedio osservabile.
+- [x] Percorso vincente completo.
+- [x] Winner claim, freeze jackpot, payout, crediti, nuovo round, reveal e settlement atomici.
+- [x] Riconciliazione del jackpot congelato.
+- [x] Fault injection tardiva prima di `SETTLED` con rollback di scelta 20, winner, payout, crediti, ricevute e nuovo round.
+- [ ] **Gate:** validazione esplicita con `verify-m1.9.7.1.ps1/.sh`; nessuno stato intermedio osservabile.
+- [x] **M1.9.7.1:** corretta la baseline audit del fault test: `STEP_SHOWN` è precedente alla transazione di settlement e non deve essere incluso negli effetti da rollbackare.
 
 ### M1.9.8 — Concurrency & Single-Winner Verification
 
