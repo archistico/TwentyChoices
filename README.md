@@ -6,9 +6,9 @@ Prototipo gratuito e simulatore tecnico di un gioco a venti scelte binarie. Ogni
 
 ## Stato del progetto
 
-Milestone corrente: **M1.9.7.1 — Late Fault Audit Baseline Hotfix (implementata, in attesa di validazione)**.
+Milestone corrente: **M1.9.8 — Concurrency & Single-Winner Verification (implementata, in attesa di validazione)**.
 
-M1.9.1, M1.9.2, la linea correttiva fino a **M1.9.2.1.3**, **M1.9.3**, **M1.9.4**, **M1.9.4.1**, **M1.9.5** e **M1.9.6** sono state validate con verifica completa verde. La baseline ufficiale è **TwentyChoices M1.9.6 su PHP 8.4+**. M1.9.7 verifica l’intero settlement vincente. M1.9.7.1 corregge esclusivamente la baseline temporale del test di fault injection: lo `STEP_SHOWN` dello step 20 è una transazione precedente e legittimamente committata, mentre il rollback deve annullare soltanto gli effetti della successiva scelta/settlement.
+M1.9.1, M1.9.2, la linea correttiva fino a **M1.9.2.1.3**, **M1.9.3**, **M1.9.4**, **M1.9.4.1**, **M1.9.5**, **M1.9.6**, **M1.9.7** e **M1.9.7.1** sono state validate con verifica completa verde. La baseline ufficiale è **TwentyChoices M1.9.7.1 su PHP 8.4+**. M1.9.8 verifica con processi PHP realmente concorrenti che due scelte 20 corrette possano produrre un solo vincitore, un solo payout e un solo round successivo; include richieste stale e retry dell’intera transazione solo per contese DBAL esplicitamente retryable.
 
 Prima di avviare M2.1 è stata pianificata la fase **M1.9 — Verification & Hardening**, composta da 15 milestone bloccanti che verificano l’intero processo pezzo per pezzo. Il piano completo è in `docs/15-verification-hardening-plan.md`.
 
@@ -57,19 +57,19 @@ php -S 127.0.0.1:8000 -t public
 php -S 127.0.0.1:8000 -t public
 ```
 
-Verifica completa M1.9.7.1, rieseguibile anche su una working copy già inizializzata e dopo precedenti esecuzioni PHPUnit:
+Verifica completa M1.9.8, rieseguibile anche su una working copy già inizializzata e dopo precedenti esecuzioni PHPUnit:
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.7.1.ps1
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.8.ps1
 ```
 
 oppure:
 
 ```bash
-./scripts/verify-m1.9.7.1.sh
+./scripts/verify-m1.9.8.sh
 ```
 
-La verifica M1.9.7.1 riesegue integralmente M1.9.7 e controlla il manifest SHA-256 della release, la coerenza della baseline PHP/Composer, la policy anti-clock-skew del timer, il bootstrap completo con `composer check-platform-reqs`, la regressione totale e tutti i gate ereditati fino a M1.9.6. M1.9.7 aggiunge il gate transazionale del settlement vincente completo: tre partecipazioni STANDARD, freeze esatto del jackpot, un solo payout, due crediti di ripartenza, un solo nuovo round da 10.000,00 €, reveal/commitment e ricevute terminali coerenti. Una fault injection subito prima di `WON → SETTLED` dimostra inoltre che nessun effetto parziale sopravvive al rollback. Il package audit rigoroso resta un controllo separato del tree pulito usato durante il confezionamento della release. `bin/.phpunit/`, scaricata automaticamente dal Symfony PHPUnit Bridge, è trattata come tooling runtime e non come sorgente della release. Restano disponibili anche gli script dei gate precedenti.
+La verifica M1.9.8 riesegue integralmente la baseline validata M1.9.7.1 e tutti i gate precedenti. Aggiunge tre race multiprocesso reali sullo stesso SQLite/WAL: due play a 19/20 inviano quasi simultaneamente la scelta 20 corretta, ma il database deve lasciare un solo winner, un solo payout e un solo nuovo round. Una challenge aperta prima della vittoria viene poi riutilizzata come richiesta stale e deve risultare priva di effetti. Il gate usa una snapshot del database di test e la ripristina integralmente al termine. Il package audit rigoroso resta un controllo separato del tree pulito usato durante il confezionamento della release. `bin/.phpunit/`, scaricata automaticamente dal Symfony PHPUnit Bridge, è trattata come tooling runtime e non come sorgente della release. Restano disponibili anche gli script dei gate precedenti.
 
 Il bootstrap genera automaticamente un `APP_SECRET` casuale in `.env.local` se non è già presente. Il file è escluso da Git e non viene distribuito nello ZIP. L’area amministrativa è limitata per default a `127.0.0.1` e `::1` tramite `ADMIN_ALLOWED_IPS`.
 
@@ -190,7 +190,7 @@ php tools/domain-tests.php
 php bin/phpunit
 ```
 
-La suite corrente contiene **119 metodi PHPUnit**, pari a **124 casi effettivi** considerando i data provider di `WinningPathTest` e `RoundCommitmentTest`. Il runner indipendente contiene **20 verifiche**. I comandi di verifica dedicati fino a `app:verification:winning-settlement --env=test` aggiungono scenari transazionali di gate interamente rollbackati.
+La suite corrente contiene **120 metodi PHPUnit**, pari a **125 casi effettivi** considerando i data provider di `WinningPathTest` e `RoundCommitmentTest`. Il runner indipendente contiene **20 verifiche**. I comandi di verifica dedicati fino a `app:verification:concurrency-single-winner --env=test` aggiungono scenari transazionali di gate interamente rollbackati.
 
 ## Documentazione
 

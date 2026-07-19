@@ -1,6 +1,6 @@
 # M1.9 — Verification & Hardening Plan
 
-> Stato corrente: **M1.9.1, M1.9.2 e M1.9.2.1.3 validate; M1.9.3 Cryptographic Commitment Verification implementata e in attesa di validazione**. Evidenze: `docs/17-m1.9.2-catalog-round-verification.md`, `docs/18-m1.9.2.1-runtime-timing-hardening.md` e `docs/22-m1.9.3-cryptographic-commitment-verification.md`.
+> Stato corrente: **milestone validate fino a M1.9.7.1; M1.9.8 Concurrency & Single-Winner Verification implementata e in attesa di validazione**. Evidenze più recenti: `docs/27-m1.9.7-winning-settlement-verification.md`, `docs/28-m1.9.7.1-late-fault-audit-baseline-hotfix.md` e `docs/29-m1.9.8-concurrency-single-winner-verification.md`.
 
 ## Obiettivo
 
@@ -741,3 +741,16 @@ Gate: `scripts/verify-m1.9.7.ps1/.sh`.
 La fault injection M1.9.7 ha confermato il rollback di tutti gli effetti del settlement, ma il test PHPUnit acquisiva il contatore audit prima dell'apertura dello step 20. `OpenPlayStep::open()` committa legittimamente `STEP_SHOWN` prima della scelta finale; la baseline corretta deve quindi essere acquisita dopo tale apertura. M1.9.7.1 corregge solo il test e la documentazione, senza modificare il settlement produttivo.
 
 Gate: `scripts/verify-m1.9.7.1.ps1/.sh`.
+
+
+## Stato implementazione M1.9.8 — Concurrency & Single-Winner Verification
+
+Baseline di partenza: **M1.9.7.1 validata integralmente dall'utente**.
+
+M1.9.8 aggiunge un gate multiprocesso reale: per tre round consecutivi due processi PHP distinti vengono sincronizzati su una barriera e inviano quasi simultaneamente la scelta 20 corretta di due play a 19/20. Ogni race deve produrre un solo `winner_play_id`, un solo `JACKPOT_PAYOUT`, un solo nuovo round `ACTIVE` e nessuna sovrascrittura del winner. Una terza challenge aperta prima della vittoria viene inviata dopo il settlement e deve risultare stale e priva di effetti.
+
+`SubmitChoice` ritenta fino a tre volte l'intera transazione esclusivamente per `Doctrine\DBAL\Exception\RetryableException`, così una contesa SQLite/WAL viene risolta rileggendo lo stato autorevole dopo rollback invece di ritentare una singola query sul vecchio snapshot.
+
+Il gate crea una snapshot consistente di `var/test.db` con `VACUUM INTO`, esegue le race reali e ripristina integralmente la snapshot al termine, rendendo il test ripetibile anche da PHPUnit.
+
+Gate: `scripts/verify-m1.9.8.ps1/.sh`.

@@ -251,3 +251,10 @@ Una seconda sessione conserva un vecchio challenge aperto. Dopo la validazione d
 ## Evoluzione M1.8
 
 L'autenticazione amministrativa, la matrice ruoli, l'invalidazione sessioni e la CSP senza `unsafe-inline` sono descritte in `docs/13-admin-auth-e2e.md`.
+
+
+## Concorrenza della scelta finale — M1.9.8
+
+La scelta usa una transazione DBAL completa. In presenza di contesa SQLite/WAL, `SubmitChoice` ritenta l'intera transazione fino a tre volte esclusivamente per eccezioni DBAL `RetryableException`. Il retry riparte da una nuova lettura dello stato persistito: non viene mai ritentata isolatamente una query di settlement.
+
+Il winner resta deciso dall'UPDATE condizionale `ACTIVE AND winner_play_id IS NULL`, dagli indici unici su round/payout e dai trigger di immutabilità. Il gate M1.9.8 esercita tre race multiprocesso reali e richieste stale post-win.

@@ -35,3 +35,5 @@ jobs:
       - run: php bin/console app:verification:full-losing-journey --env=test
       - run: php bin/console doctrine:migrations:migrate --no-interaction --env=test
       - run: php bin/console app:verification:winning-settlement --env=test
+      - run: php bin/console doctrine:migrations:migrate --no-interaction --env=test
+      - run: php bin/console app:verification:concurrency-single-winner --env=test

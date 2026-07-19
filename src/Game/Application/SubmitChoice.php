@@ -14,6 +14,7 @@ use App\Shared\Time\Clock;
 use DateTimeImmutable;
 use DateTimeZone;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\RetryableException;
 use Throwable;
 
 final readonly class SubmitChoice
@@ -28,6 +29,39 @@ final readonly class SubmitChoice
     }
 
     public function submit(
+        string $playPublicCode,
+        string $playerSessionId,
+        string $challengeToken,
+        string $selectedOption,
+        string $requestId,
+        ?int $clientElapsedMilliseconds,
+    ): ChoiceSubmissionResult {
+        $attempt = 0;
+
+        while (true) {
+            try {
+                return $this->submitOnce(
+                    $playPublicCode,
+                    $playerSessionId,
+                    $challengeToken,
+                    $selectedOption,
+                    $requestId,
+                    $clientElapsedMilliseconds,
+                );
+            } catch (RetryableException $exception) {
+                ++$attempt;
+                if ($attempt >= 3) {
+                    throw $exception;
+                }
+
+                // A concurrent SQLite writer may invalidate a read snapshot. Retry the whole
+                // transaction from authoritative persisted state rather than retrying a single SQL statement.
+                usleep(25_000 * $attempt);
+            }
+        }
+    }
+
+    private function submitOnce(
         string $playPublicCode,
         string $playerSessionId,
         string $challengeToken,

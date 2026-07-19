@@ -586,3 +586,34 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.7.1.ps1
 ```
 
 Dettagli: `docs/28-m1.9.7.1-late-fault-audit-baseline-hotfix.md`.
+
+
+## M1.9.8 — Concurrency & Single-Winner Verification
+
+Baseline: **M1.9.7.1 validata integralmente dall'utente**.
+
+Verifiche introdotte:
+
+- nuovo `ConcurrencySingleWinnerGateVerifier`;
+- nuovo comando `app:verification:concurrency-single-winner --env=test`;
+- worker console interno `app:verification:concurrency-worker`, disponibile solo in ambiente test;
+- tre race reali con due processi PHP sincronizzati sulla stessa scelta 20 corretta;
+- SQLite test portato temporaneamente in WAL con `busy_timeout=5000` durante il gate;
+- esattamente un winner, un payout e un nuovo round per race;
+- candidata concorrente non vincente gestita come play ormai chiusa/accreditata;
+- richiesta stale aperta prima della vittoria e inviata dopo il settlement senza alcuna mutazione;
+- tentativo di sovrascrivere `winner_play_id` respinto;
+- verifica esplicita di indici/trigger SQLite single-winner;
+- retry completo di `SubmitChoice` solo su `RetryableException` DBAL;
+- snapshot/restore completo del database di test per isolare i commit multiprocesso;
+- CI estesa con il gate M1.9.8.
+
+Suite predisposta: **120 metodi PHPUnit / 125 casi effettivi**, più **20 verifiche indipendenti**.
+
+Gate operativo:
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\verify-m1.9.8.ps1
+```
+
+Dettagli: `docs/29-m1.9.8-concurrency-single-winner-verification.md`.

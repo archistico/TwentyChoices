@@ -209,15 +209,16 @@ Lo sviluppo di nuove funzionalità è temporaneamente sospeso per verificare l'i
 - [x] Winner claim, freeze jackpot, payout, crediti, nuovo round, reveal e settlement atomici.
 - [x] Riconciliazione del jackpot congelato.
 - [x] Fault injection tardiva prima di `SETTLED` con rollback di scelta 20, winner, payout, crediti, ricevute e nuovo round.
-- [ ] **Gate:** validazione esplicita con `verify-m1.9.7.1.ps1/.sh`; nessuno stato intermedio osservabile.
+- [x] **Gate:** validazione esplicita con `verify-m1.9.7.1.ps1/.sh`; nessuno stato intermedio osservabile.
 - [x] **M1.9.7.1:** corretta la baseline audit del fault test: `STEP_SHOWN` è precedente alla transazione di settlement e non deve essere incluso negli effetti da rollbackare.
 
 ### M1.9.8 — Concurrency & Single-Winner Verification
 
-- [ ] Due richieste vincenti concorrenti.
-- [ ] Richieste stale dopo la vittoria.
-- [ ] Un solo vincitore, payout e nuovo round.
-- [ ] **Gate:** unicità del vincitore garantita dal database.
+- [x] Tre race reali con due processi PHP e due richieste vincenti concorrenti.
+- [x] Richieste stale aperte prima della vittoria e inviate dopo il settlement.
+- [x] Un solo vincitore, payout e nuovo round; loser concorrente gestito sullo stato ormai chiuso.
+- [x] Retry dell’intera transazione `SubmitChoice` solo per errori DBAL retryable.
+- [ ] **Gate:** validazione esplicita con `verify-m1.9.8.ps1/.sh`; unicità del vincitore garantita dal database.
 
 ### M1.9.9 — Reset & Restart Credit Verification
 
